@@ -6,20 +6,16 @@
 using namespace std;
 
 vec3 collision_vec(vec3 dir, const collidable &a, const collidable &b) {
-  cout << "R: " << dir << endl;
-  
   vec3 one = a.collision_point(dir);
   vec3 two = b.collision_point(dir*-1);
-  cout << "1. " << one << endl
-       << "2. " << two << endl;
-  
   vec3 s = one-two;
-  cout << "SUM: " << s << endl;
+  
+  cout << "one: " << one << " two: " << two << " dir: " << dir << " sum: " << s << endl;
   return s;
 }
 
 bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
-  
+  cout << "** ";
   for (std::vector<vec3>::iterator it = pts.begin(); it != pts.end(); it++) {
     cout << *it << " - ";
   }
@@ -27,31 +23,30 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
   
   switch (pts.size()) {
     case 0:
-    case 1:
       break;
+    case 1: {
+      vec3 &a = pts[0];
+      if (a.lenSq() == 0) {
+        return true;
+      }
+      break;
+    }
     case 2: {
       vec3 &a = pts[1];
       vec3 &b = pts[0];
       vec3 ab = b - a;
       vec3 a0 = a * -1;
-      vec3 v = (ab*a0);
 
       double dist = ab.dot(a0);
 
+      vec3 v = (ab*a0);
       cout << "ab:" << ab << " = " << "a0:" <<a0 << " = v:" << v << endl;
 
-      if (dist > 0) {
-        if (v.lenSq() == 0) {
-          if (a0.lenSq() <= ab.lenSq()) {
-            return true;
-          }
-          else {
-            return false;
-          }
-        }
-        else {
-          dir = (v * ab);
-        }
+      if (v.lenSq() == 0) {
+        return true;
+      }
+      else if (dist > 0) {
+        dir = (v * ab);
       }
       else {
         pts[0] = a;
@@ -349,18 +344,19 @@ bool collide(const collidable &a, const collidable &b) {
   vec3 n,
        p = collision_vec(vec3(1.0f, 0.0f, 0.0f), a, b);
 
+  cout << "p: " << p << endl;
+
   pts.reserve(4);
   pts.push_back(p);
   p *= -1;
   while (true) {
     n = collision_vec(p, a, b);
-
-    cout << "N= " << n << " v " << p << endl;
+    cout << "== n: " << n << " dir: " << p << endl;
 
     if (n.dot(p) < 0) return false;
     pts.push_back(n);
     if (process_simplex(pts, p)) return true;
-    cout << " = " << p << endl;
+    cout << " = p: " << p << endl;
   }
 }
 

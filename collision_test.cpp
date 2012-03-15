@@ -80,16 +80,30 @@ class cube: public collidable {
   }
 };
 
+void test(const collidable &a, const collidable &b) {
+  cout << (collide(a, b) ? "HIT" : "NO HIT") << endl;
+  cout << endl;
+}
+
 int main(int argc, char** argv) {
 
+  collidable *a, *b;
 
-  sphere one(-1, 0, 0, 1);
-  sphere two(1, 0, 0, 1.1);
+  a = new sphere(-1, 0, 0, 1);
+  b = new sphere(1, 0, 0, 1.1);
+  test(*a, *b);
+  
+  a = new sphere(-1, 0, 0, 1);
+  b = new sphere(1, 0, 0, 0.9);
+  test(*a, *b);
+  
+  a = new sphere(-1, 0, 0, 1);
+  b = new sphere(1, 0, 0, 1.0);
+  test(*a, *b);
 
-//  sphere one(-1, 0, 0, 1);
-//  cube two(1.0, 0.0, 0.0, 1.5, 0.0, 0.0);
-
-
-  cout << (collide(one, two) ? "HIT" : "NO HIT") << endl;
-
+/*
+  a = new sphere(-1, 0, 0, 1);
+  b = new cube(1.0, 0.0, 0.0, 1.5, 0.0, 0.0);
+  test(*a, *b);
+*/
 }

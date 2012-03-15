@@ -10,16 +10,16 @@ vec3 collision_vec(vec3 dir, const collidable &a, const collidable &b) {
   vec3 two = b.collision_point(dir*-1);
   vec3 s = one-two;
   
-  cout << "one: " << one << " two: " << two << " dir: " << dir << " sum: " << s << endl;
+  cerr << "one: " << one << " two: " << two << " dir: " << dir << " sum: " << s << endl;
   return s;
 }
 
 bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
-  cout << "** ";
+  cerr << "** ";
   for (std::vector<vec3>::iterator it = pts.begin(); it != pts.end(); it++) {
-    cout << *it << " - ";
+    cerr << *it << " - ";
   }
-  cout << endl;
+  cerr << endl;
   
   switch (pts.size()) {
     case 0:
@@ -40,7 +40,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
       double dist = ab.dot(a0);
 
       vec3 v = (ab*a0);
-      cout << "ab:" << ab << " = " << "a0:" <<a0 << " = v:" << v << endl;
+      cerr << "ab:" << ab << " = " << "a0:" <<a0 << " = v:" << v << endl;
 
       if (v.lenSq() == 0) {
         return true;
@@ -64,6 +64,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
       vec3 a0 = a * -1;
       vec3 abc = (ab*ac);
       
+      cerr << "\t\tabc: " << abc << " ab: " << ab << " ac: " << ac << " a0: " << a0 << endl;
       if ((abc*ac).dot(a0) > 0) { // ac or ab edge or a corner
         if (ac.dot(a0) > 0) { // ac edge
           pts[1] = c;
@@ -102,7 +103,8 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
         else { // inside triangle, above or below
           vec3 ctmp = c;
           pts[0] = a;
-          if (abc.dot(a0) > 0) { // above
+          cerr << "Dot: " << (abc.dot(a0)) << endl;
+          if (abc.dot(a0) >= 0) { // above  points 
             pts[2] = ctmp;
             dir = abc;
           }
@@ -344,20 +346,23 @@ bool collide(const collidable &a, const collidable &b) {
   vec3 n,
        p = collision_vec(vec3(1.0f, 0.0f, 0.0f), a, b);
 
-  cout << "p: " << p << endl;
+  cerr << "p: " << p << endl;
 
   pts.reserve(4);
   pts.push_back(p);
   p *= -1;
   while (true) {
+//  for (int i = 0; i < 3; i++) {
     n = collision_vec(p, a, b);
-    cout << "== n: " << n << " dir: " << p << endl;
+    cerr << "== n: " << n << " dir: " << p << endl;
+    cerr << n.dot(p) << endl;
 
     if (n.dot(p) < 0) return false;
     pts.push_back(n);
     if (process_simplex(pts, p)) return true;
-    cout << " = p: " << p << endl;
+    cerr << " = p: " << p << endl;
   }
+  return false;
 }
 
 

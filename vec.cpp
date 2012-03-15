@@ -20,7 +20,7 @@ vec3::vec3(double x, double y, double z) {
 }
 
 
-double vec3::dot(const vec3& v) {
+double vec3::dot(const vec3& v) const {
   return x*v.x + y*v.y + z*v.z;
 }
 
@@ -88,7 +88,7 @@ vec3& vec3::operator-=(const vec3& v) {
 
 
 vec3 vec3::operator*(const vec3& v) const {
-  return vec3(y*v.z - z*v.y, x*v.z - z*v.x, x*v.y - y*v.x);
+  return vec3(y*v.z - z*v.y, z*v.x - x*v.z, x*v.y - y*v.x);
 }
 
 

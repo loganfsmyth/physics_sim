@@ -11,7 +11,7 @@ class vec3 {
     vec3();
     vec3(double x, double y, double z);
 
-    double dot(const vec3& v2);
+    double dot(const vec3& v2) const;
     vec3& norm();
     double len() const;
     double lenSq() const;

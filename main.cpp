@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <algorithm>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <SDL/SDL.h>
 #include <GL/gl.h>
@@ -10,11 +11,12 @@ using namespace std;
 class Game {
   bool close;
 
+  float angle;
+
   public:
   Game();
   ~Game();
   void run();
-
   void simulate(unsigned long step);
   void render(int interp_percent);
   void check_events();
@@ -45,12 +47,15 @@ void Game::run() {
 
     for (int i = 0; i < 10000; i++);
 
+    cout << (1000000.0/delta) << "\r";
     render(100*accum/step);
   }
+  cout << endl;
 }
 
 Game::Game() {
   close = false;
+  angle = 0.0f;
 
   int w = 640,
       h = 480;
@@ -85,7 +90,7 @@ void Game::resize(int w, int h) {
 
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  gluPerspective(45.0f, (GLfloat)w / (GLfloat)h, 0.1, 100.0f);
+  gluPerspective(45.0f, (GLfloat)w / (GLfloat)h, 0.1, 2000.0f);
 
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
@@ -97,19 +102,86 @@ void Game::simulate(unsigned long step) {
 
 }
 
+void plane(GLfloat w, GLfloat h, int axis = 0) {
+  // axis: xy:0, yz:1, xz:2
+
+  GLfloat pts[4][3];
+  GLfloat* start = (GLfloat*)pts;
+  fill(start, start+4*3, (GLfloat)0.0f);
+  GLfloat x1 = -1*w/2,
+          x2 = w/2,
+          y1 = -1*h/2,
+          y2 = h/2;
+
+
+  switch (axis) {
+    case 0:
+      pts[0][0] = x1; pts[0][1] = y1;
+      pts[1][0] = x1; pts[1][1] = y2;
+      pts[2][0] = x2; pts[2][1] = y2;
+      pts[3][0] = x2; pts[3][1] = y1;
+      break;
+    case 1:
+      pts[0][1] = x1; pts[0][2] = y1;
+      pts[1][1] = x1; pts[1][2] = y2;
+      pts[2][1] = x2; pts[2][2] = y2;
+      pts[3][1] = x2; pts[3][2] = y1;
+      break;
+    case 2:
+
+      pts[0][0] = x1; pts[0][2] = y1;
+      pts[1][0] = x1; pts[1][2] = y2;
+      pts[2][0] = x2; pts[2][2] = y2;
+      pts[3][0] = x2; pts[3][2] = y1;
+      break;
+  }
+
+  glBegin(GL_QUADS);
+  for (int i = 0; i < 4; i++) {
+    glColor3f(pts[i][0], pts[i][1], pts[i][2]);
+    glVertex3f(pts[i][0], pts[i][1], pts[i][2]);
+  }
+  glEnd();
+}
+
+void box(GLfloat h, GLfloat w, GLfloat l) {
+  glPushMatrix();
+
+  glTranslatef(0.0f, 0.0f, -1*l/2);
+  plane(w, h);
+  glTranslatef(0.0f, 0.0f, l);
+  plane(w, h);
+
+  glTranslatef(-1*w/2, 0.0f, -1*l/2);
+  plane(l, h, 1);
+  glTranslatef(w, 0.0f, 0.0f);
+  plane(l, h, 1);
+
+  glTranslatef(-1*w/2, -1*h/2, 0.0f);
+  plane(l, w, 2);
+  glTranslatef(0.0f, h, 0.0f);
+  plane(l, w, 2);
+
+  glPopMatrix();
+}
+
+
 void Game::render(int interp_percent) {
 
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
   glLoadIdentity();
-  glTranslatef(-1.5f, 0.0f, -6.0f);
-  glBegin(GL_TRIANGLES);
-    glColor3f(1.0, 0.5, 0.5);
-    glVertex3f(1.0f, 0.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 0.0f);
-    glVertex3f(-1.0f, 1.0f, 0.0f);
-  glEnd();
+
+
+  glTranslatef(0.0f, -1.0f, -6.0f);
+  glColor3f(1.0f, 1.0f, 0.7f);
+  plane(20.0f, 20.0f, 2);
+
+  glRotatef(angle, 0.0f, 1.0f, 0.0f);
+  box(1.0f, 1.0f, 1.0f);
+
   SDL_GL_SwapBuffers();
 }
+
 
 void Game::check_events() {
 
@@ -117,8 +189,12 @@ void Game::check_events() {
   while (SDL_PollEvent(&e)) {
     switch (e.type) {
       case SDL_ACTIVEEVENT:
+        break;
       case SDL_KEYDOWN:
+        angle += 4;
+        break;
       case SDL_KEYUP:
+
       case SDL_MOUSEMOTION:
       case SDL_MOUSEBUTTONDOWN:
       case SDL_MOUSEBUTTONUP:

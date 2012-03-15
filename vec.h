@@ -2,7 +2,7 @@
 #include <ostream>
 
 class vec3 {
-  private:
+  public:
     double x;
     double y;
     double z;
@@ -13,8 +13,8 @@ class vec3 {
 
     double dot(const vec3& v2);
     vec3& norm();
-    double len();
-    double lenSq();
+    double len() const;
+    double lenSq() const;
     vec3& negate();
 
     bool operator==(const vec3& v);
@@ -22,10 +22,10 @@ class vec3 {
     vec3& operator+=(const vec3& v);
     vec3& operator-=(const vec3& v);
     vec3& operator*=(double factor);
-    vec3 operator*(const vec3& v);
-    vec3 operator*(double factor);
-    vec3 operator-(const vec3& v);
-    vec3 operator+(const vec3& v);
+    vec3 operator*(const vec3& v) const;
+    vec3 operator*(double factor) const;
+    vec3 operator-(const vec3& v) const;
+    vec3 operator+(const vec3& v) const;
 
     friend std::ostream& operator<<(std::ostream&,vec3&);
 

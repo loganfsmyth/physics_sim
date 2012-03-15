@@ -38,13 +38,13 @@ vec3& vec3::norm() {
 
 
 
-double vec3::len() {
+double vec3::len() const {
   return sqrt(x*x + y*y + z*z);
 }
 
 
 
-double vec3::lenSq() {
+double vec3::lenSq() const {
   return x*x + y*y + z*z;
 }
 
@@ -87,13 +87,13 @@ vec3& vec3::operator-=(const vec3& v) {
 
 
 
-vec3 vec3::operator*(const vec3& v) {
+vec3 vec3::operator*(const vec3& v) const {
   return vec3(y*v.z - z*v.y, x*v.z - z*v.x, x*v.y - y*v.x);
 }
 
 
 
-vec3 vec3::operator*(double factor) {
+vec3 vec3::operator*(double factor) const {
   return vec3(x*factor, y*factor, z*factor);
 }
 
@@ -106,9 +106,9 @@ vec3& vec3::operator*=(double factor) {
   return *this;
 }
 
-vec3 vec3::operator-(const vec3& v) {
+vec3 vec3::operator-(const vec3& v) const {
   return vec3(x-v.x, y-v.y, z-v.z);
 }
-vec3 vec3::operator+(const vec3& v) {
+vec3 vec3::operator+(const vec3& v) const {
   return vec3(x+v.x, y+v.y, z+v.z);
 }

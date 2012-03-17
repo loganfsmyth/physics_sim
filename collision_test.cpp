@@ -160,25 +160,10 @@ int main(int argc, char** argv) {
 
   collidable *a, *b;
 
-/*
-  a = new sphere(-1, 0, 0, 1);
-  b = new sphere(1, 0, 0, 1.1);
-  test(*a, *b, true);
-  
-  a = new sphere(-1, 0, 0, 1);
-  b = new sphere(1, 0, 0, 0.9);
-  test(*a, *b, false);
-  
-  a = new sphere(-1, 0, 0, 1);
-  b = new sphere(1, 0, 0, 1.0);
-  test(*a, *b, true);
-/**/
-
-//*
-  
   /**
    * Test point v point in 3d space.
    */
+/**/
   cout << "point v point" << endl;
   a = new point(1, 0, 0);
   b = new point(1, 0, 0);
@@ -201,10 +186,11 @@ int main(int argc, char** argv) {
   
   b = new point(1,0,-1);
   test(*a, *b, false);
-
+/**/
   /**
    * Test point v line in 3d space
    */
+/**/
   cout << "point v line intersect" << endl;
   a = new point(0,0,0);
   b = new line(vec3(1, 0, 0), vec3(-1, 0, 0));
@@ -230,7 +216,7 @@ int main(int argc, char** argv) {
   
   // same tests with point slightly moved
   cout << "point v line no intersect" << endl;
-  a = new point(0.01,0,0);
+  a = new point(0.01, 0.02, 0);
   b = new line(vec3(1, 0, 0), vec3(-1, 0, 0));
   test(*a, *b, false);
 
@@ -252,7 +238,6 @@ int main(int argc, char** argv) {
   b = new line(vec3(1, 1, -1), vec3(-1, -1, 1));
   test(*a, *b, false);
 
-   
   // More specific point placements at end of line
   cout << "points at very ends of line" << endl;
   b = new line(vec3(1, 0, 0), vec3(-1, 0, 0));
@@ -274,12 +259,12 @@ int main(int argc, char** argv) {
   
   a = new point(-0.99,0,0);
   test(*a, *b, true);
-  
+/**/
   
   /**
    * Test point v triangle in 3d space
    */
-
+/**/
   cout << "point just beyond triangle front/back" << endl;
   // beyond front/back
   a = new point(0, 0, 0.01);
@@ -343,20 +328,23 @@ int main(int argc, char** argv) {
   
   a = new point(-0.49, 0, 0);
   test(*a, *b, true);
-  
+/**/
+
   /**
    * Test point v tetrahedron in 3d space
    */
+/**/
   cout << "point v tetrahedron" << endl;
 
   b = new tetrahedron(vec3(0, 1, 0), vec3(1, -1, 0), vec3(-1, -1, 1), vec3(-1, -1, -1));
+
   a = new point(0,0,0);
   test(*a, *b, true);
 
   cout << "point inside faces" << endl;
-  a = new point(0.0, -0.33, 0.33);
+  a = new point(0.0, -0.30, 0.3);
   test(*a, *b, true);
-  
+
   a = new point(0.0, -0.33, -0.33);
   test(*a, *b, true);
 
@@ -378,7 +366,6 @@ int main(int argc, char** argv) {
 
   a = new point(-0.35, -1.03, 0);
   test(*a, *b, false);
-
 
   cout << "point inside edge" << endl;
 
@@ -405,7 +392,6 @@ int main(int argc, char** argv) {
   // cd edge
   a = new point(-0.99, -0.99, 0);
   test(*a, *b, true);
-
 
   cout << "point outside edge" << endl;
 
@@ -458,13 +444,13 @@ int main(int argc, char** argv) {
 
   a = new point(-0.99, -0.99, -0.99);
   test(*a, *b, true);
+/**/
 
 
-
-  return 0;
   /**
    * Test point v cube in 3d space
    */
+/** /
   cout << "Beyond faces of cube" << endl;
   a = new cube(0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
   b = new point(2.0, 0.0, 0.0);
@@ -572,12 +558,13 @@ int main(int argc, char** argv) {
   a = new cube(0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
   b = new point(-2.0, -2.0, 0.0);
   test(*a, *b, false);
-
+/** /
 
   cout << "Inside faces of cube" << endl;
   a = new cube(0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
   b = new point(0.95, 0.0, 0.0);
   test(*a, *b, true);
+/** /
 
   a = new cube(0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
   b = new point(-0.95, 0.0, 0.0);
@@ -599,7 +586,6 @@ int main(int argc, char** argv) {
   b = new point(0.0, 0.0, -0.95);
   test(*a, *b, true);
   
-
   cout << "Inside corners of cube" << endl;
   a = new cube(0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
   b = new point(0.95, 0.95, 0.95);
@@ -686,6 +672,22 @@ int main(int argc, char** argv) {
   a = new cube(0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
   b = new point(0.0, 0.0, 0.0);
   test(*a, *b, true);
+/**/
+
+
+/** /
+  a = new sphere(-1, 0, 0, 1);
+  b = new sphere(1, 0, 0, 1.1);
+  test(*a, *b, true);
+  
+  a = new sphere(-1, 0, 0, 1);
+  b = new sphere(1, 0, 0, 0.9);
+  test(*a, *b, false);
+  
+  a = new sphere(-1, 0, 0, 1);
+  b = new sphere(1, 0, 0, 1.0);
+  test(*a, *b, true);
+/**/
 
 
 /**/

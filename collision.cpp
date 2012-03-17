@@ -118,7 +118,13 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
         }
         else { // inside triangle, above or below
           cerr << ".2";
-          if (abc.dot(a0) > 0) { // above  points 
+          double v = abc.dot(a0);
+          if (v == 0) {
+            dir = a0;
+            cerr << endl;
+            return true;
+          }
+          else if (v > 0) { // above  points 
             cerr << ".1";
             // pts => c,b,a
             dir = abc;
@@ -128,7 +134,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
             // pts => b,c,a
             vec3 tmp = c;
             pts[0] = b;
-            pts[1] = c;
+            pts[1] = tmp;
             dir = abc * -1;
           }
         }
@@ -392,10 +398,11 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
           }
         }
       }
+      cerr << endl;
       break;
     }
   }
-  cerr << endl;
+
 
   return false;
 }
@@ -412,8 +419,8 @@ bool collide(const collidable &a, const collidable &b) {
   pts.reserve(4);
   pts.push_back(p);
   p *= -1;
-//  while (true) {
-  for (int i = 0; i < 5; i++) {
+  while (true) {
+//  for (int i = 0; i < 5; i++) {
     n = collision_vec(p, a, b);
 //    cerr << "== n: " << n << " dir: " << p << endl;
 //    cerr << n.dot(p) << endl;

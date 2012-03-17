@@ -814,7 +814,7 @@ void test_sphere_sphere() {
 }
 
 bool process_simplex(std::vector<vec3> &pts, vec3 &dir);
-void two_simplex(bool ex, char* s, vec3 origin, vec3 exdir) {
+void two_simplex(bool ex, string s, vec3 origin, vec3 exdir) {
   vec3 a = vec3( 0, 1, 0) - origin,
        b = vec3( 1,-1, 0) - origin,
        c = vec3(-1,-1, 0) - origin,
@@ -829,8 +829,8 @@ void two_simplex(bool ex, char* s, vec3 origin, vec3 exdir) {
   bool res = process_simplex(sim, dir);
   bool fail = (res != ex);
   int i = 0;
-  for (; s[i]; i += 1) {
-    switch (s[i]) {
+  for (string::iterator it = s.begin(); it != s.end(); it++, i++) {
+    switch (*it) {
       case 'a':
         if (a != sim[i]) fail = true;
         break;
@@ -843,7 +843,7 @@ void two_simplex(bool ex, char* s, vec3 origin, vec3 exdir) {
     }
   }
 
-  if (i != sim.size()) fail = true;
+  if (s.size() != sim.size()) fail = true;
   if (dir.dot(exdir)/(dir.len()*exdir.len()) < 0.99) fail = true;
 
   cout << (fail ? "FAIL" : "PASS") << endl;
@@ -864,7 +864,7 @@ void test_two_simplex() {
   two_simplex(false, "cba", vec3(0,0,-1), vec3(0, 0, -1)); // below triangle
 }
 
-void three_simplex(bool ex, char* s, vec3 origin, vec3 exdir) {
+void three_simplex(bool ex, string s, vec3 origin, vec3 exdir) {
   vec3 a = vec3( 0, 0, 1) - origin,
        b = vec3( 0, 1,-1) - origin,
        c = vec3(-1,-1,-1) - origin,
@@ -882,8 +882,8 @@ void three_simplex(bool ex, char* s, vec3 origin, vec3 exdir) {
   bool fail = (res != ex);
 //  cerr << fail << endl;
   int i = 0;
-  for (; s[i]; i += 1) {
-    switch (s[i]) {
+  for (string::iterator it = s.begin(); it != s.end(); it++, i++) {
+    switch (*it) {
       case 'a':
         if (a != sim[i]) fail = true;
 //        cerr << fail << endl;
@@ -905,7 +905,7 @@ void three_simplex(bool ex, char* s, vec3 origin, vec3 exdir) {
 
 //  cerr << dir << endl;
 
-  if (i != sim.size()) fail = true;
+  if (s.size() != sim.size()) fail = true;
 //  cerr << fail << endl;
   if (dir.dot(exdir)/(dir.len()*exdir.len()) < 0.99) fail = true;
 //  cerr << fail << endl;

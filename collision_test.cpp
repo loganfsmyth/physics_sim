@@ -825,15 +825,159 @@ void test_sphere_sphere() {
 
 }
 
+bool process_simplex(std::vector<vec3> &pts, vec3 &dir);
+void tri_simplex(bool ex, char* s, vec3 origin, vec3 exdir) {
+  vec3 a = vec3( 0, 1, 0) - origin,
+       b = vec3( 1,-1, 0) - origin,
+       c = vec3(-1,-1, 0) - origin,
+       dir;
+
+  std::vector<vec3> sim;
+  sim.reserve(4);
+  sim.push_back(c);
+  sim.push_back(b);
+  sim.push_back(a);
+
+  bool res = process_simplex(sim, dir);
+  bool fail = (res != ex);
+  int i = 0;
+  for (; s[i]; i += 1) {
+    switch (s[i]) {
+      case 'a':
+        if (a != sim[i]) fail = true;
+        break;
+      case 'b':
+        if (b != sim[i]) fail = true;
+        break;
+      case 'c':
+        if (c != sim[i]) fail = true;
+        break;
+    }
+  }
+
+  if (i != sim.size()) fail = true;
+  if (dir.dot(exdir)/(dir.len()*exdir.len()) < 0.99) fail = true;
+
+  cout << (fail ? "FAIL" : "PASS") << endl;
+}
+
+void test_tri_simplex() {
+
+  tri_simplex(true, "cba", vec3(0,0,0), vec3()); // on plane at origin
+
+  tri_simplex(false, "ba", vec3(1,0,0), vec3(2, 1, 0)); // off to left side
+  tri_simplex(false, "ca", vec3(-1,0,0), vec3(-2, 1, 0)); // off to right side
+  // bottom side is not checked because it cannot be
+
+  tri_simplex(false, "a", vec3(0,1.5,0), vec3(0, 0.5, 0)); // off top corner
+  // bottom two corners are not checked because they can't be true
+
+  tri_simplex(false, "bca", vec3(0,0,1), vec3(0, 0, 1)); // above triangle
+  tri_simplex(false, "cba", vec3(0,0,-1), vec3(0, 0, -1)); // below triangle
+}
+
+void quad_simplex(bool ex, char* s, vec3 origin, vec3 exdir) {
+  vec3 a = vec3( 0, 0, 1) - origin,
+       b = vec3( 0, 1,-1) - origin,
+       c = vec3(-1,-1,-1) - origin,
+       d = vec3( 1,-1,-1) - origin,
+       dir;
+
+  cerr << "a: " << a << " b: " << b << " c: " << c << " d: " << d << endl;
+
+  std::vector<vec3> sim;
+  sim.reserve(4);
+  sim.push_back(d);
+  sim.push_back(c);
+  sim.push_back(b);
+  sim.push_back(a);
+
+  bool res = process_simplex(sim, dir);
+  bool fail = (res != ex);
+  cerr << fail << endl;
+  int i = 0;
+  for (; s[i]; i += 1) {
+    switch (s[i]) {
+      case 'a':
+        if (a != sim[i]) fail = true;
+        cerr << fail << endl;
+        break;
+      case 'b':
+        if (b != sim[i]) fail = true;
+        cerr << fail << endl;
+        break;
+      case 'c':
+        if (c != sim[i]) fail = true;
+        cerr << fail << endl;
+        break;
+      case 'd':
+        if (d != sim[i]) fail = true;
+        cerr << fail << endl;
+        break;
+    }
+  }
+
+  cerr << dir << endl;
+
+  if (i != sim.size()) fail = true;
+  cerr << fail << endl;
+  if (dir.dot(exdir)/(dir.len()*exdir.len()) < 0.99) fail = true;
+  cerr << fail << endl;
+
+  cout << (fail ? "FAIL" : "PASS") << endl;
+}
+
+void test_quad_simplex() {
+
+  // Inside center
+  quad_simplex(true, "dcba", vec3(0,0,0), vec3(0,0,-1));
+
+  // Faces
+  // Beyond faces
+  quad_simplex(false, "cba", vec3(-0.34,0,-0.34), vec3(-4,2,1));
+  quad_simplex(false, "dba", vec3( 0.34,0,-0.34), vec3( 4,2,1));
+  quad_simplex(false, "dca", vec3( 0,-0.68,-0.34), vec3( 0,-4,2));
+  // Inside faces
+  quad_simplex(true, "dcba", vec3(-0.33,0,-0.33), vec3());
+  quad_simplex(true, "dcba", vec3( 0.33,0,-0.33), vec3());
+  quad_simplex(true, "dcba", vec3( 0,-0.66,-0.33), vec3());
+  // bottom face covered by 3-simplex checks
+
+  // Edges
+  // Beydon edges
+  quad_simplex(false, "ba", vec3(0, 1, 0), vec3(0, 2, 1));
+  quad_simplex(false, "ca", vec3(-1, -1, 0), vec3(-2, -2, 2));
+  quad_simplex(false, "da", vec3(1, -1, 0), vec3(2, -2, 2));
+  
+  // inside edges
+  quad_simplex(true, "dcba", vec3(0, 0.33, 0), vec3());
+  quad_simplex(true, "dcba", vec3(-0.33, -0.33, 0), vec3());
+  quad_simplex(true, "dcba", vec3( 0.33, -0.33, 0), vec3());
+  // bc, bd, cd covered by 2 and 3-simplex checks
+
+
+  // Above 'a'
+  quad_simplex(false, "a", vec3(0, 0, 2), vec3(0, 0, 1));
+
+  // Inside 'a' corner
+  quad_simplex(true, "dcba", vec3(0, 0, 1), vec3());
+
+}
+
 
 int main(int argc, char** argv) {
 
+  test_tri_simplex();
+
+  test_quad_simplex();
+
+/**/
   test_point_point();
   test_point_line();
   test_point_triangle();
   test_point_tetrahedron();
   test_point_cube();
   test_sphere_sphere();
-
+/**/
 
 }

@@ -10,17 +10,11 @@ vec3 collision_vec(vec3 dir, const collidable &a, const collidable &b) {
   vec3 two = b.collision_point(dir*-1);
   vec3 s = one-two;
   
-  cerr << "one: " << one << " two: " << two << " dir: " << dir << " sum: " << s << endl;
+//  cerr << "one: " << one << " two: " << two << " dir: " << dir << " sum: " << s << endl;
   return s;
 }
 
 bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
-  cerr << "** ";
-  for (std::vector<vec3>::iterator it = pts.begin(); it != pts.end(); it++) {
-    cerr << *it << " - ";
-  }
-  cerr << endl;
-  
   switch (pts.size()) {
     case 0:
       break;
@@ -40,7 +34,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
       double dist = ab.dot(a0);
 
       vec3 v = (ab*a0);
-//      cerr << "ab:" << ab << " = " << "a0:" <<a0 << " = v:" << v << endl;
+      cerr << "ab:" << ab << " = " << "a0:" <<a0 << " = v:" << v << endl;
 
       if (v.lenSq() == 0) {
         return true;
@@ -64,6 +58,8 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
       vec3 a0 = a * -1;
       vec3 abc = (ab*ac);
       
+
+      cerr << "triangle: a: " << a << " b: " << b << " c: " << c << endl;
 //      cerr << "\t\tabc: " << abc << " ab: " << ab << " ac: " << ac << " a0: " << a0 << endl;
       cerr << "triangle";
       if ((abc*ac).dot(a0) > 0) { // ac or ab edge or a corner
@@ -117,7 +113,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
           }
         }
         else { // inside triangle, above or below
-          cerr << ".2";
+          cerr << "-2";
           double v = abc.dot(a0);
           if (v == 0) {
             dir = a0;
@@ -155,15 +151,18 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
       vec3 abd = (ab*ad);
       vec3 acd = (ac*ad);
 
+      cerr << "ab: " << ab << " ac: " << ac << " ad: " << ad << " a0: " << a0 << endl;
+      cerr << "abc: " << abc << " abd: " << abd << " acd: " << acd << endl;
+
       cerr << "tetra";
 
       if (abc.dot(a0) > 0) { // bc edges/corners excluded by prior info
         cerr << ".1";
-        if ((abc * ab).dot(a0) > 0) { // abd face, ab edge or a corner
+        if ((ab * abc).dot(a0) > 0) { // abd face, ab edge or a corner
           cerr << ".1";
           if (ab.dot(a0) > 0) { // ab edge or abd face
             cerr << ".1";
-            if ((abd*ab).dot(a0) > 0) { // ab edge
+            if ((ab*abd).dot(a0) > 0) { // ab edge
               cerr << ".1";
               // pts => b,a
               pts[0] = b;
@@ -183,9 +182,9 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
           }
           else {
             cerr << ".2";
-            if (ad.dot(a0) > 0) {
+            if (ad.dot(a0) < 0) {
               cerr << ".1";
-              if (ac.dot(a0) > 0) { // a corner
+              if (ac.dot(a0) < 0) { // a corner
                 cerr << ".1";
                 // pts => a
                 pts[0] = a;
@@ -218,7 +217,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
             cerr << ".1";
             if (ac.dot(a0) > 0) { // ac edge
               cerr << ".1";
-              if ((acd*ac).dot(a0) > 0) { // ac edge
+              if ((ac*acd).dot(a0) > 0) { // ac edge
                 cerr << ".1";
                 // pts => c,a
                 pts[0] = c;
@@ -237,7 +236,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
             }
             else {
               cerr << ".2";
-              if (ad.dot(a0) > 0) { // a corner
+              if (ad.dot(a0) < 0) { // a corner
                 cerr << ".1";
                 // pts => a
                 pts[0] = a;
@@ -271,7 +270,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
         cerr << ".2";
         if (abd.dot(a0) < 0) { // abd plane, bd edges/corders excluded by prior info
           cerr << ".1";
-          if ((abd*ab).dot(a0) > 0) { // ab edge or a corner
+          if ((ab*abd).dot(a0) > 0) { // ab edge or a corner
             cerr << ".1";
             if (ab.dot(a0) > 0) { // ab edge
               cerr << ".1";
@@ -330,7 +329,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
               pts[1] = b;
               pts[2] = a;
               pts.pop_back();
-              dir = abd;
+              dir = abd * -1;
             }
           }
         }
@@ -338,7 +337,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
           cerr << ".2";
           if (acd.dot(a0) > 0) { // acd plane, cd edges/corners excluded by prior info
             cerr << ".1";
-            if ((acd*ac).dot(a0) > 0) { // ac edge or a corner
+            if ((ac*acd).dot(a0) > 0) { // ac edge or a corner
               cerr << ".1";
               if (ac.dot(a0) > 0) { // ac edge
                 cerr << ".1";
@@ -381,13 +380,13 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                   dir = a0;
                 }
               }
-              else { // abd face
+              else { // acd face
                 cerr << ".2";
                 // pts => d,b,a
-                pts[1] = b;
+                pts[1] = c;
                 pts[2] = a;
                 pts.pop_back();
-                dir = abd;
+                dir = acd;
               }
             }
           }
@@ -422,8 +421,8 @@ bool collide(const collidable &a, const collidable &b) {
   while (true) {
 //  for (int i = 0; i < 5; i++) {
     n = collision_vec(p, a, b);
-//    cerr << "== n: " << n << " dir: " << p << endl;
-//    cerr << n.dot(p) << endl;
+    cerr << "== n: " << n << " dir: " << p << endl;
+    cerr << n.dot(p) << endl;
 
     if (n.dot(p) < 0) return false;
     pts.push_back(n);

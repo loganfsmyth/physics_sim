@@ -1,10 +1,13 @@
 
 #include <iostream>
 #include <algorithm>
+#include <list>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <SDL/SDL.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
+
+#include "collide.h"
 
 using namespace std;
 
@@ -12,6 +15,7 @@ class Game {
   bool close;
 
   float angle;
+
 
   public:
   Game();
@@ -24,6 +28,18 @@ class Game {
   void resize(int h, int w);
 };
 
+class gameobj: public collidable {
+
+  void calcNext(unsigned long step);
+  void commit();
+  void triggerCollision(vec3 normal);
+  virtual vec3 collision_point(vec3 dir) const;
+}
+
+vec3 calcCollisionVector(const gameobj &a, const gameobj &b) {
+
+
+}
 
 void Game::run() {
   using namespace boost::posix_time;
@@ -98,9 +114,64 @@ void Game::resize(int w, int h) {
 }
 
 void Game::simulate(unsigned long step) {
-
-
+  while (step) {
+    for (list<gameobj>::iterator it = objs.begin(); it != objs.end(); it++) {
+      it->calcNext(step);
+    }
+    list<pair<gameobj*,gameobj*> > had_collision;
+    for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
+      for (list<gameobj*>::iterator it2 = objs.begin(); it2 != objs.end(); it++) {
+        if (collide(**it, **it2)) {
+          had_collision.push_back(pair(*it, *it2));
+        }
+      }
+    }
+    if (had_collision.size()) {
+      int min = 0, max = step, mid;
+      while ( min <= max) {
+        mid = (max+min)/2;
+        it->calcNext(mid);
+        list<pair<gameobj*,gameobj*> >::iterator it;
+        list<pair<gameobj*,gameobj*> > new_had_collision;
+        bool hit = false;
+        for (it = had_collision.begin(); it != had_collision.end(); it++) {
+          if (collide(*(it->first), *(it->second))) {
+            hit = true;
+            new_had_collision.push_back(*it);
+          }
+        }
+        if (hit) {
+          max = mid - 1;
+          had_collision = new_had_collision;
+        }
+        else {
+          min = mid + 1;
+        }
+      }
+      if (max > 0) {
+        for (list<gameobj>::iterator it = objs.begin(); it != objs.end(); it++) {
+          it->calcNext(max);
+          it->commit();
+        }
+        for (it = had_collision.begin(); it != had_colission.end(); it++) {
+          gameobj* f = it->first, s = it->second;
+          vec3 v = calcCollisionVector(*f, *s);
+          f->triggerCollision(v);
+          s->triggerCollision(v * -1);
+        }
+        step -= max;
+      }
+      else {
+        step -= step;
+      }
+    }
+    else {
+      step -= step;
+    }
+  }
 }
+
+
 
 void plane(GLfloat w, GLfloat h, int axis = 0) {
   // axis: xy:0, yz:1, xz:2

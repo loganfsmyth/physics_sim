@@ -935,7 +935,7 @@ void test_quad_simplex() {
   // Faces
   // Beyond faces
   quad_simplex(false, "cba", vec3(-0.34,0,-0.34), vec3(-4,2,1));
-  quad_simplex(false, "dba", vec3( 0.34,0,-0.34), vec3( 4,2,1));
+  quad_simplex(false, "bda", vec3( 0.34,0,-0.34), vec3( 4,2,1));
   quad_simplex(false, "dca", vec3( 0,-0.68,-0.34), vec3( 0,-4,2));
   // Inside faces
   quad_simplex(true, "dcba", vec3(-0.33,0,-0.33), vec3());

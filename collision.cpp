@@ -161,7 +161,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
         if ((ab * abc).dot(a0) > 0) { // abd face, ab edge or a corner
           cerr << ".1";
           if (ab.dot(a0) > 0) { // ab edge or abd face
-            cerr << ".1";
+            cerr << "-1";
             if ((ab*abd).dot(a0) > 0) { // ab edge
               cerr << ".1";
               // pts => b,a
@@ -173,14 +173,16 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
             }
             else { // abd face
               cerr << ".2";
-              // pts => d,b,a
-              pts[1] = b;
+              // pts => b,d,a, wound opposite
+              vec3 tmp = d;
+              pts[0] = b;
+              pts[1] = tmp;
               pts[2] = a;
               pts.pop_back();
-              dir = abd;
+              dir = abd * -1;
             }
           }
-          else {
+          else { // TODO: Check all these conditions
             cerr << ".2";
             if (ad.dot(a0) < 0) {
               cerr << ".1";
@@ -203,11 +205,13 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
             }
             else { // abd face
               cerr << ".2";
-              // pts => d,b,a
-              pts[1] = b;
+              // pts => b,d,a, wound opposite
+              vec3 tmp = d;
+              pts[0] = b;
+              pts[1] = tmp;
               pts[2] = a;
               pts.pop_back();
-              dir = abd;
+              dir = abd * -1;
             }
           }
         }
@@ -216,7 +220,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
           if ((abc*ac).dot(a0) > 0) { // ac edge or a corner
             cerr << ".1";
             if (ac.dot(a0) > 0) { // ac edge
-              cerr << ".1";
+              cerr << "-1";
               if ((ac*acd).dot(a0) > 0) { // ac edge
                 cerr << ".1";
                 // pts => c,a
@@ -234,7 +238,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                 dir = acd;
               }
             }
-            else {
+            else { // TODO Can this be abd face too?
               cerr << ".2";
               if (ad.dot(a0) < 0) { // a corner
                 cerr << ".1";
@@ -325,8 +329,10 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
             }
             else { // abd face
               cerr << ".2";
-              // pts => d,b,a
-              pts[1] = b;
+              // pts => b,d,a, wound opposite
+              vec3 tmp = d;
+              pts[0] = b;
+              pts[1] = tmp;
               pts[2] = a;
               pts.pop_back();
               dir = abd * -1;
@@ -359,7 +365,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
               }
             }
             else {
-              cerr << ".2";
+              cerr << "-2";
               if ((acd*ad).dot(a0) > 0) { // ad edge or a corner
                 cerr << ".1";
                 if (ad.dot(a0) > 0) { // ad edge
@@ -391,7 +397,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
             }
           }
           else {
-            cerr << ".2";
+            cerr << "-2";
             cerr << endl;
             return true;
           }

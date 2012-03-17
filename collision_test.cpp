@@ -104,7 +104,6 @@ class cube: public collidable {
     points.push_back(vec3(   nr, -1*nr,    nr));
     points.push_back(vec3(   nr, -1*nr, -1*nr));
 
-    cerr << "CUBE" << endl;
     for (vector<vec3>::iterator it = points.begin(); it != points.end(); it++) {
       double x = it->x,
              y = it->y,
@@ -116,11 +115,7 @@ class cube: public collidable {
 
       it->x = cos(rz)*x - sin(rz)*y;
       it->y = sin(rz)*x + cos(rz)*y;
-
-      vec3 tmp = c + *it;
-      cerr << tmp << endl;
     }
-    cerr << endl;
   }
   vec3 collision_point(vec3 dir) const {
     double l = dir.len();
@@ -131,18 +126,12 @@ class cube: public collidable {
       vec3 max;
       double dist = 0;
       for (vector<vec3>::const_iterator it = points.begin(); it != points.end(); it++) {
-        //double n = ((*it) * dir).lenSq() / (*it).lenSq();
         double n = it->dot(dir);
-//        vec3 v = *it;
-//        cerr << v << " && " << v.dot(dir) << endl;
         if (n > dist) {
-//          cerr << "Up " << v << endl;
           dist = n;
           max = *it;
         }
       }
-
-      cerr << "Max: " << max << endl;
       dir = max;
     }
 
@@ -153,7 +142,6 @@ class cube: public collidable {
 void test(const collidable &a, const collidable &b, bool ex) {
   bool hit = collide(a, b);
   cout << (hit == ex ? "PASS: " : "FAIL: ") << (hit ? "HIT" : "NO HIT") << endl;
-//  cerr << endl;
 }
 
 void test_point_point() {
@@ -883,8 +871,6 @@ void three_simplex(bool ex, char* s, vec3 origin, vec3 exdir) {
        d = vec3( 1,-1,-1) - origin,
        dir;
 
-  cerr << "a: " << a << " b: " << b << " c: " << c << " d: " << d << endl;
-
   std::vector<vec3> sim;
   sim.reserve(4);
   sim.push_back(d);
@@ -894,35 +880,35 @@ void three_simplex(bool ex, char* s, vec3 origin, vec3 exdir) {
 
   bool res = process_simplex(sim, dir);
   bool fail = (res != ex);
-  cerr << fail << endl;
+//  cerr << fail << endl;
   int i = 0;
   for (; s[i]; i += 1) {
     switch (s[i]) {
       case 'a':
         if (a != sim[i]) fail = true;
-        cerr << fail << endl;
+//        cerr << fail << endl;
         break;
       case 'b':
         if (b != sim[i]) fail = true;
-        cerr << fail << endl;
+//        cerr << fail << endl;
         break;
       case 'c':
         if (c != sim[i]) fail = true;
-        cerr << fail << endl;
+//        cerr << fail << endl;
         break;
       case 'd':
         if (d != sim[i]) fail = true;
-        cerr << fail << endl;
+//        cerr << fail << endl;
         break;
     }
   }
 
-  cerr << dir << endl;
+//  cerr << dir << endl;
 
   if (i != sim.size()) fail = true;
-  cerr << fail << endl;
+//  cerr << fail << endl;
   if (dir.dot(exdir)/(dir.len()*exdir.len()) < 0.99) fail = true;
-  cerr << fail << endl;
+//  cerr << fail << endl;
 
   cout << (fail ? "FAIL" : "PASS") << endl;
 }

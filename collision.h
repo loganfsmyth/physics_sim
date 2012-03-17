@@ -9,6 +9,7 @@ class collidable {
     virtual ~collidable() {}
 };
 
+bool process_simplex(std::vector<vec3> &pts, vec3 &dir);
 bool collide(const collidable &a, const collidable &b);
 bool collide(const collidable &a, const collidable &b, std::vector<vec3> &pts, vec3 &dir);
 

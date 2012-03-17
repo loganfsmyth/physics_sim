@@ -813,7 +813,6 @@ void test_sphere_sphere() {
 
 }
 
-bool process_simplex(std::vector<vec3> &pts, vec3 &dir);
 void two_simplex(bool ex, string s, vec3 origin, vec3 exdir) {
   vec3 a = vec3( 0, 1, 0) - origin,
        b = vec3( 1,-1, 0) - origin,

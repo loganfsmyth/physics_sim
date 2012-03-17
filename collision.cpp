@@ -1,9 +1,12 @@
 
-#include <vector>
+#include <iostream>
 #include "collision.h"
 
-#include <iostream>
-using namespace std;
+using std::cout;
+using std::cerr;
+using std::endl;
+
+#define COLLISION_DEBUG 1
 
 #ifndef COLLISION_DEBUG
 #define COLLISION_DEBUG 0
@@ -187,7 +190,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
       vec3 ad = d - a;
       vec3 a0 = a * -1;
       vec3 abc = (ab*ac);
-      vec3 abd = (ab*ad);
+      vec3 abd = (ab*ad); // This vector points INWARD
       vec3 acd = (ac*ad);
 
 #if COLLISION_DEBUG
@@ -539,26 +542,30 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
 }
 
 
+bool collide(const collidable &a, const collidable &b, std::vector<vec3> &pts, vec3 &dir) {
+  vec3 n;
+  dir = collision_vec(vec3(1.0f, 0.0f, 0.0f), a, b);
+
+  pts.reserve(4);
+  pts.push_back(dir);
+  dir *= -1;
+  while (true) {
+    n = collision_vec(dir, a, b);
+#if COLLISION_DEBUG
+    cerr << "== n: " << n << " dir: " << dir << endl;
+    cerr << n.dot(dir) << endl;
+#endif
+    if (n.dot(dir) < 0) return false;
+    pts.push_back(n);
+    if (process_simplex(pts, dir)) return true;
+  }
+  return false;
+}
 
 bool collide(const collidable &a, const collidable &b) {
   std::vector<vec3> pts;
-  vec3 n,
-       p = collision_vec(vec3(1.0f, 0.0f, 0.0f), a, b);
-
-  pts.reserve(4);
-  pts.push_back(p);
-  p *= -1;
-  while (true) {
-    n = collision_vec(p, a, b);
-#if COLLISION_DEBUG
-    cerr << "== n: " << n << " dir: " << p << endl;
-    cerr << n.dot(p) << endl;
-#endif
-    if (n.dot(p) < 0) return false;
-    pts.push_back(n);
-    if (process_simplex(pts, p)) return true;
-  }
-  return false;
+  vec3 dir;
+  return collide(a, b, pts, dir);
 }
 
 

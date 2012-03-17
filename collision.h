@@ -1,5 +1,7 @@
 
+#include <vector>
 #include "vec.h"
+
 
 class collidable {
   public:
@@ -8,3 +10,5 @@ class collidable {
 };
 
 bool collide(const collidable &a, const collidable &b);
+bool collide(const collidable &a, const collidable &b, std::vector<vec3> &pts, vec3 &dir);
+

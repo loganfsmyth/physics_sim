@@ -819,11 +819,11 @@ void two_simplex(bool ex, string s, vec3 origin, vec3 exdir) {
        c = vec3(-1,-1, 0) - origin,
        dir;
 
-  std::vector<vec3> sim;
+  std::vector<simplex_pt> sim;
   sim.reserve(4);
-  sim.push_back(c);
-  sim.push_back(b);
-  sim.push_back(a);
+  sim.push_back(simplex_pt(c, vec3(), vec3()));
+  sim.push_back(simplex_pt(b, vec3(), vec3()));
+  sim.push_back(simplex_pt(a, vec3(), vec3()));
 
   bool res = process_simplex(sim, dir);
   bool fail = (res != ex);
@@ -831,13 +831,13 @@ void two_simplex(bool ex, string s, vec3 origin, vec3 exdir) {
   for (string::iterator it = s.begin(); it != s.end(); it++, i++) {
     switch (*it) {
       case 'a':
-        if (a != sim[i]) fail = true;
+        if (a != sim[i].val) fail = true;
         break;
       case 'b':
-        if (b != sim[i]) fail = true;
+        if (b != sim[i].val) fail = true;
         break;
       case 'c':
-        if (c != sim[i]) fail = true;
+        if (c != sim[i].val) fail = true;
         break;
     }
   }
@@ -870,12 +870,12 @@ void three_simplex(bool ex, string s, vec3 origin, vec3 exdir) {
        d = vec3( 1,-1,-1) - origin,
        dir;
 
-  std::vector<vec3> sim;
+  std::vector<simplex_pt> sim;
   sim.reserve(4);
-  sim.push_back(d);
-  sim.push_back(c);
-  sim.push_back(b);
-  sim.push_back(a);
+  sim.push_back(simplex_pt(d, vec3(), vec3()));
+  sim.push_back(simplex_pt(c, vec3(), vec3()));
+  sim.push_back(simplex_pt(b, vec3(), vec3()));
+  sim.push_back(simplex_pt(a, vec3(), vec3()));
 
   bool res = process_simplex(sim, dir);
   bool fail = (res != ex);
@@ -884,19 +884,19 @@ void three_simplex(bool ex, string s, vec3 origin, vec3 exdir) {
   for (string::iterator it = s.begin(); it != s.end(); it++, i++) {
     switch (*it) {
       case 'a':
-        if (a != sim[i]) fail = true;
+        if (a != sim[i].val) fail = true;
 //        cerr << fail << endl;
         break;
       case 'b':
-        if (b != sim[i]) fail = true;
+        if (b != sim[i].val) fail = true;
 //        cerr << fail << endl;
         break;
       case 'c':
-        if (c != sim[i]) fail = true;
+        if (c != sim[i].val) fail = true;
 //        cerr << fail << endl;
         break;
       case 'd':
-        if (d != sim[i]) fail = true;
+        if (d != sim[i].val) fail = true;
 //        cerr << fail << endl;
         break;
     }
@@ -965,4 +965,5 @@ int main(int argc, char** argv) {
   test_sphere_sphere();
 /**/
 
+  return 0;
 }

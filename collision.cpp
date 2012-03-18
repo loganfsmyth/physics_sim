@@ -12,8 +12,10 @@ using std::endl;
 #define COLLISION_DEBUG 0
 #endif
 
+simplex_pt::simplex_pt(vec3 v, vec3 na, vec3 nb): val(v), a(na), b(nb) { }
+simplex_pt::simplex_pt() { }
 
-vec3 collision_vec(vec3 dir, const collidable &a, const collidable &b) {
+simplex_pt collision_vec(vec3 dir, const collidable &a, const collidable &b) {
   vec3 one = a.collision_point(dir);
   vec3 two = b.collision_point(dir*-1);
   vec3 s = one-two;
@@ -21,23 +23,24 @@ vec3 collision_vec(vec3 dir, const collidable &a, const collidable &b) {
 #if COLLISION_DEBUG
   cerr << "one: " << one << " two: " << two << " dir: " << dir << " sum: " << s << endl;
 #endif
-  return s;
+  simplex_pt val(s,one,two);
+  return val;
 }
 
-bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
+bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
   switch (pts.size()) {
     case 0:
       break;
     case 1: {
-      vec3 &a = pts[0];
+      vec3 &a = pts[0].val;
       if (a.lenSq() == 0) {
         return true;
       }
       break;
     }
     case 2: {
-      vec3 &a = pts[1];
-      vec3 &b = pts[0];
+      vec3 &a = pts[1].val;
+      vec3 &b = pts[0].val;
       vec3 ab = b - a;
       vec3 a0 = a * -1;
 
@@ -55,16 +58,16 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
         dir = (v * ab);
       }
       else {
-        pts[0] = a;
+        pts[0] = pts[1];
         pts.pop_back();
         dir = a0;
       }
       break;
     }
     case 3: {
-      vec3 &a = pts[2];
-      vec3 &b = pts[1];
-      vec3 &c = pts[0];
+      vec3 &a = pts[2].val;
+      vec3 &b = pts[1].val;
+      vec3 &c = pts[0].val;
       vec3 ab = b - a;
       vec3 ac = c - a;
       vec3 a0 = a * -1;
@@ -85,7 +88,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
           cerr << ".1";
 #endif
           // pts => c,a
-          pts[1] = a;
+          pts[1] = pts[2];
           pts.pop_back();
           dir = ac * a0 * ac;
         }
@@ -98,8 +101,8 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
             cerr << ".1";
 #endif
             // pts => b,a
-            pts[0] = b;
-            pts[1] = a;
+            pts[0] = pts[1];
+            pts[1] = pts[2];
             pts.pop_back();
             dir = ab * a0 * ab;
           }
@@ -108,7 +111,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
             cerr << ".2";
 #endif
             // pts => a
-            pts[0] = a;
+            pts[0] = pts[2];
             pts.pop_back();
             pts.pop_back();
             dir = a0;
@@ -128,8 +131,8 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
             cerr << ".1";
 #endif
             // pts => b,a
-            pts[0] = b;
-            pts[1] = a;
+            pts[0] = pts[1];
+            pts[1] = pts[2];
             pts.pop_back();
             dir = ab * a0 * ab;
           }
@@ -138,7 +141,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
             cerr << ".2";
 #endif
             // pts => a
-            pts[0] = a;
+            pts[0] = pts[2];
             pts.pop_back();
             pts.pop_back();
             dir = a0;
@@ -168,8 +171,8 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
             cerr << ".2";
 #endif
             // pts => b,c,a
-            vec3 tmp = c;
-            pts[0] = b;
+            simplex_pt tmp = pts[0];
+            pts[0] = pts[1];
             pts[1] = tmp;
             dir = abc * -1;
           }
@@ -181,10 +184,10 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
       break;
     }
     case 4: {
-      vec3 &a = pts[3];
-      vec3 &b = pts[2];
-      vec3 &c = pts[1];
-      vec3 &d = pts[0];
+      vec3 &a = pts[3].val;
+      vec3 &b = pts[2].val;
+      vec3 &c = pts[1].val;
+      vec3 &d = pts[0].val;
       vec3 ab = b - a;
       vec3 ac = c - a;
       vec3 ad = d - a;
@@ -217,8 +220,8 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
               cerr << ".1";
 #endif
               // pts => b,a
-              pts[0] = b;
-              pts[1] = a;
+              pts[0] = pts[2];
+              pts[1] = pts[3];
               pts.pop_back();
               pts.pop_back();
               dir = ab*a0*ab;
@@ -228,10 +231,10 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
               cerr << ".2";
 #endif
               // pts => b,d,a, wound opposite
-              vec3 tmp = d;
-              pts[0] = b;
+              simplex_pt tmp = pts[0];
+              pts[0] = pts[1];
               pts[1] = tmp;
-              pts[2] = a;
+              pts[2] = pts[3];
               pts.pop_back();
               dir = abd * -1;
             }
@@ -249,7 +252,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                 cerr << ".1";
 #endif
                 // pts => a
-                pts[0] = a;
+                pts[0] = pts[3];
                 pts.pop_back();
                 pts.pop_back();
                 pts.pop_back();
@@ -260,7 +263,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                 cerr << ".2";
 #endif
                 // pts => d,c,a
-                pts[2] = a;
+                pts[2] = pts[3];
                 pts.pop_back();
                 dir = acd;
               }
@@ -270,10 +273,10 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
               cerr << ".2";
 #endif
               // pts => b,d,a, wound opposite
-              vec3 tmp = d;
-              pts[0] = b;
+              simplex_pt tmp = pts[0];
+              pts[0] = pts[1];
               pts[1] = tmp;
-              pts[2] = a;
+              pts[2] = pts[3];
               pts.pop_back();
               dir = abd * -1;
             }
@@ -296,8 +299,8 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                 cerr << ".1";
 #endif
                 // pts => c,a
-                pts[0] = c;
-                pts[1] = a;
+                pts[0] = pts[1];
+                pts[1] = pts[3];
                 pts.pop_back();
                 pts.pop_back();
                 dir = ac*a0*ac;
@@ -307,7 +310,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                 cerr << ".2";
 #endif
                 // pts => d,c,a
-                pts[2] = a;
+                pts[2] = pts[3];
                 pts.pop_back();
                 dir = acd;
               }
@@ -321,7 +324,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                 cerr << ".1";
 #endif
                 // pts => a
-                pts[0] = a;
+                pts[0] = pts[3];
                 pts.pop_back();
                 pts.pop_back();
                 pts.pop_back();
@@ -332,7 +335,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                 cerr << ".2";
 #endif
                 // pts => d,a
-                pts[1] = a;
+                pts[1] = pts[3];
                 pts.pop_back();
                 pts.pop_back();
                 dir = ad*a0*ad;
@@ -344,9 +347,9 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
             cerr << ".2";
 #endif
             // pts => c,b,a
-            pts[0] = c;
-            pts[1] = b;
-            pts[2] = a;
+            pts[0] = pts[1];
+            pts[1] = pts[2];
+            pts[2] = pts[3];
             pts.pop_back();
             dir = abc;
           }
@@ -369,8 +372,8 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
               cerr << ".1";
 #endif
               // pts => b,a
-              pts[0] = b;
-              pts[1] = a;
+              pts[0] = pts[2];
+              pts[1] = pts[3];
               pts.pop_back();
               pts.pop_back();
               dir = ab*a0*ab;
@@ -380,7 +383,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
               cerr << ".2";
 #endif
               // pts => a
-              pts[0] = a;
+              pts[0] = pts[3];
               pts.pop_back();
               pts.pop_back();
               pts.pop_back();
@@ -404,7 +407,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                   cerr << ".1";
 #endif
                   // pts => d,a
-                  pts[1] = a;
+                  pts[1] = pts[3];
                   pts.pop_back();
                   pts.pop_back();
                   dir = ad*a0*ad;
@@ -414,7 +417,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                   cerr << ".2";
 #endif
                   // pts => d,c,a
-                  pts[2] = a;
+                  pts[2] = pts[3];
                   pts.pop_back();
                   dir = acd;
                 }
@@ -424,7 +427,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                 cerr << ".2";
 #endif
                 // pts => a
-                pts[0] = a;
+                pts[0] = pts[3];
                 pts.pop_back();
                 pts.pop_back();
                 pts.pop_back();
@@ -436,10 +439,10 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
               cerr << ".2";
 #endif
               // pts => b,d,a, wound opposite
-              vec3 tmp = d;
-              pts[0] = b;
+              simplex_pt tmp = pts[0];
+              pts[0] = pts[2];
               pts[1] = tmp;
-              pts[2] = a;
+              pts[2] = pts[3];
               pts.pop_back();
               dir = abd * -1;
             }
@@ -462,8 +465,8 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                 cerr << ".1";
 #endif
                 // pts => c,a
-                pts[0] = c;
-                pts[1] = a;
+                pts[0] = pts[1];
+                pts[1] = pts[3];
                 pts.pop_back();
                 pts.pop_back();
                 dir = ac*a0*ac;
@@ -473,7 +476,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                 cerr << ".2";
 #endif
                 // pts => a
-                pts[0] = a;
+                pts[0] = pts[3];
                 pts.pop_back();
                 pts.pop_back();
                 pts.pop_back();
@@ -493,7 +496,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                   cerr << ".1";
 #endif
                   // pts => d,a
-                  pts[1] = a;
+                  pts[1] = pts[3];
                   pts.pop_back();
                   pts.pop_back();
                   dir = ad*a0*ad;
@@ -503,7 +506,7 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
                   cerr << ".2";
 #endif
                   // pts => a
-                  pts[0] = a;
+                  pts[0] = pts[3];
                   pts.pop_back();
                   pts.pop_back();
                   pts.pop_back();
@@ -514,9 +517,8 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
 #if COLLISION_DEBUG
                 cerr << ".2";
 #endif
-                // pts => d,b,a
-                pts[1] = c;
-                pts[2] = a;
+                // pts => d,c,a
+                pts[2] = pts[3];
                 pts.pop_back();
                 dir = acd;
               }
@@ -542,20 +544,16 @@ bool process_simplex(std::vector<vec3> &pts, vec3 &dir) {
 }
 
 
-bool collide(const collidable &a, const collidable &b, std::vector<vec3> &pts, vec3 &dir) {
-  vec3 n;
-  dir = collision_vec(vec3(1.0f, 0.0f, 0.0f), a, b);
+bool collide(const collidable &a, const collidable &b, std::vector<simplex_pt> &pts, vec3 &dir) {
+  simplex_pt n,
+             pt = collision_vec(vec3(1.0f, 0.0f, 0.0f), a, b);
 
   pts.reserve(4);
-  pts.push_back(dir);
-  dir *= -1;
+  pts.push_back(pt);
+  dir = pt.val * -1;
   while (true) {
     n = collision_vec(dir, a, b);
-#if COLLISION_DEBUG
-    cerr << "== n: " << n << " dir: " << dir << endl;
-    cerr << n.dot(dir) << endl;
-#endif
-    if (n.dot(dir) < 0) return false;
+    if (n.val.dot(dir) < 0) return false;
     pts.push_back(n);
     if (process_simplex(pts, dir)) return true;
   }
@@ -563,7 +561,7 @@ bool collide(const collidable &a, const collidable &b, std::vector<vec3> &pts, v
 }
 
 bool collide(const collidable &a, const collidable &b) {
-  std::vector<vec3> pts;
+  std::vector<simplex_pt> pts;
   vec3 dir;
   return collide(a, b, pts, dir);
 }

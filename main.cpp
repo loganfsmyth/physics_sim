@@ -21,6 +21,7 @@ class Game {
   vec3 position;
   list<gameobj*> objs;
   bool movement[4];
+  vec3 sep;
 
   public:
   Game();
@@ -49,6 +50,7 @@ class gameobj: public collidable {
   virtual vec3 collision_point(vec3 dir) const;
   virtual void render() const = 0;
 
+  void rotate(double om, char axis = 'y');
 };
 
 vec3 calcCollisionVector(const gameobj &a, const gameobj &b) {
@@ -56,6 +58,28 @@ vec3 calcCollisionVector(const gameobj &a, const gameobj &b) {
   return vec3();
 }
 
+void gameobj::rotate(double om, char axis) {
+  const double a = om * 3.14159265358979 / 180;
+  for (vector<vec3>::iterator it = pts.begin(); it != pts.end(); it++) {
+    double x = it->x, y = it->y, z = it->z;
+    switch (axis) {
+      case 'x':
+        it->y = y*cos(a) - z*sin(a);
+        it->z = y*sin(a) + z*cos(a);
+        break;
+      case 'y':
+        it->x = x*cos(a) - z*sin(a);
+        it->z = x*sin(a) + z*cos(a);
+        break;
+      case 'z':
+        it->x = x*cos(a) - y*sin(a);
+        it->y = x*sin(a) + y*cos(a);
+        break;
+      default:
+        break;
+    }
+  }
+}
 void gameobj::calcNext(unsigned long step) { }
 void gameobj::commit() { }
 void gameobj::triggerCollision(vec3 norm) { }
@@ -169,6 +193,7 @@ class tetrahedron: public gameobj {
     glTranslated(-1*pos.x, -1*pos.y, -1*pos.z);
   }
 
+
 };
 
 
@@ -227,8 +252,55 @@ Game::Game() : updown(0), leftright(90), position(0,0, 6) {
 
   glClearColor(0,0,0,0);
 
-  objs.push_back(new box(vec3(0, 4, 0), 2, 2, 2));
-  objs.push_back(new tetrahedron(vec3(), 3));
+//  objs.push_back(new box(vec3(0, 4, 0), 2, 2, 2));
+  
+
+  gameobj *a = new tetrahedron(vec3(), 2),
+          //*b = new tetrahedron(vec3(1, 2.01, -1), 2);
+          //*b = new tetrahedron(vec3(0, 2.01, -1), 2);
+          *b = new tetrahedron(vec3(0, 1, 1.7), 2);
+          
+
+  b->rotate(180, 'y');
+  for (vector<vec3>::iterator it = b->pts.begin(); it != b->pts.end(); it++) {
+    vec3 v = *it + b->pos;
+    cout << v;
+  }
+  cout << endl;
+
+
+
+  vec3 v(a->collision_point(vec3(0,1,0)));
+  cout << v << endl;
+  v = a->collision_point(vec3(0, 0, -1));
+  cout << v << endl;
+
+  v = a->collision_point(vec3(1, 0, 1));
+  cout << v << endl;
+
+  v = a->collision_point(vec3(-1, 0, 1));
+  cout << v << endl;
+
+
+  v = b->collision_point(vec3(0,1,0));
+  cout << v << endl;
+  v = b->collision_point(vec3(0, 0, -1));
+  cout << v << endl;
+
+  v = b->collision_point(vec3(1, 0, 1));
+  cout << v << endl;
+
+  v = b->collision_point(vec3(-1, 0, 1));
+  cout << v << endl;
+
+  objs.push_back(a);
+  objs.push_back(b);
+  
+  vec3 pa, pb, da, db;
+  sep = collision_point(*a, *b, pa, pb, da, db);
+
+  cout << sep << "-" << pa << pb << "=" << da << db << endl;
+
 }
 Game::~Game() {
 
@@ -348,7 +420,12 @@ void Game::render(int interp_percent) {
   for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
     (*it)->render();
   }
-
+  vec3 v = sep * 1000;
+  glLineWidth(2);
+  glBegin(GL_LINES);
+    glVertex3d(-v.x, -v.y, -v.z);
+    glVertex3d( v.x,  v.y,  v.z);
+  glEnd();
 
   SDL_GL_SwapBuffers();
 }

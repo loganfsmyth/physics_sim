@@ -586,7 +586,7 @@ void closest_simplex(const collidable &a, const collidable &b, std::vector<simpl
   }
 }
 
-bool collision_point(const collidable &a, const collidable &b, vec3 &ap, vec3 &bp, vec3 &adir, vec3 &bdir) {
+vec3 collision_point(const collidable &a, const collidable &b, vec3 &ap, vec3 &bp, vec3 &adir, vec3 &bdir) {
   std::vector<simplex_pt> pts;
   closest_simplex(a, b, pts);
 
@@ -594,6 +594,8 @@ bool collision_point(const collidable &a, const collidable &b, vec3 &ap, vec3 &b
 
   switch (pts.size()) {
     case 1: // 2 points
+      return pts[0].val;
+
       cout << "pts: " << pts[0].val << pts[0].a << pts[0].b << endl;
       // pt-pt collision
       // read 2 pts from simplex
@@ -603,19 +605,76 @@ bool collision_point(const collidable &a, const collidable &b, vec3 &ap, vec3 &b
       bdir = vec3();
       break;
     case 2: {// 3 or 4 points
-      int count = 4;
-      if (pts[0].a == pts[1].a) count -= 1;
-      if (pts[0].a == pts[1].b) count -= 1;
-      if (pts[0].b == pts[1].a) count -= 1;
-      if (pts[0].b == pts[1].b) count -= 1;
+      vec3 &a0 = pts[1].val;
+      vec3 ab = pts[0].val - pts[1].val;
+      return ab*a0*ab;
 
       cout << "pts: " << pts[0].val << pts[0].a << pts[0].b << endl;
       cout << "     " << pts[1].val << pts[1].a << pts[1].b << endl;
 
       cout << "1-simplex";
 
-      if (count == 4) { // edge-edge collision
+      if (pts[0].a == pts[1].a) {
         cout << ".1";
+        
+        vec3 b_diff = pts[1].b - pts[0].b;
+        vec3 pt = a.collision_point(b_diff);
+        vec3 a_diff = pt - pts[0].a;
+        if ((a_diff*b_diff).lenSq() < 0.1) { // edge-edge
+          cout << ".1";
+          vec3 v = (pts[1].a - pts[1].b) * (1.0 / 2);
+          bp = pts[1].b + b_diff * (v.dot(b_diff)/b_diff.dot(b_diff));
+          ap = pts[0].a - a_diff * (v.dot(a_diff)/a_diff.dot(a_diff));
+        }
+        else {
+          cout << ".2";
+          pt = a.collision_point(b_diff * -1);
+          vec3 a_diff = pt-pts[0].a;
+          if ((a_diff*b_diff).lenSq() < 0.1) { // edge-edge
+            cout << ".1";
+            vec3 v = (pts[0].a - pts[0].b) * (1.0 / 2);
+            bp = pts[0].b + (b_diff * (v.dot(b_diff)/b_diff.dot(b_diff)));
+            ap = pts[0].a + (a_diff * -1) * (v.dot(a_diff)/a_diff.dot(a_diff));
+          }
+          else { // edge-pt
+            cout << ".2";
+            vec3 v = (pts[0].a - pts[0].b);
+            bp = pts[0].b + b_diff * (v.dot(b_diff)/b_diff.dot(b_diff));
+            ap = pts[0].a;
+          }
+        }
+      }
+      else if (pts[0].b == pts[1].b) {
+        cout << ".2";
+        vec3 a_diff = pts[1].a - pts[0].a;
+        vec3 pt = b.collision_point(a_diff);
+        vec3 b_diff = pt - pts[0].b;
+        if ((a_diff*b_diff).lenSq() < 0.1) { // edge-edge
+          cout << ".1";
+          vec3 v = (pts[1].b - pts[1].a) * (1.0 / 2);
+          ap = pts[1].a + a_diff * (v.dot(a_diff)/a_diff.dot(a_diff));
+          bp = pts[0].b - b_diff * (v.dot(b_diff)/b_diff.dot(b_diff));
+        }
+        else {
+          cout << ".2";
+          pt = b.collision_point(a_diff * -1);
+          vec3 b_diff = pt-pts[0].b;
+          if ((a_diff*b_diff).lenSq() < 0.1) { // edge-edge
+            cout << ".1";
+            vec3 v = (pts[0].b - pts[0].a) * (1.0 / 2);
+            ap = pts[0].a + (a_diff * (v.dot(a_diff)/a_diff.dot(a_diff)));
+            bp = pts[0].b + (b_diff * -1) * (v.dot(b_diff)/b_diff.dot(b_diff));
+          }
+          else { // edge-pt
+            cout << ".2";
+            vec3 v = (pts[0].b - pts[0].a);
+            ap = pts[0].a + a_diff * (v.dot(a_diff)/a_diff.dot(a_diff));
+            bp = pts[0].b;
+          }
+        }
+      }
+      else { // edge-edge collision
+        cout << ".3";
         vec3 a_diff = pts[1].a - pts[0].a;
         vec3 b_diff = pts[1].b - pts[0].b;
         if (a_diff.lenSq() < b_diff.lenSq()) {
@@ -631,96 +690,43 @@ bool collision_point(const collidable &a, const collidable &b, vec3 &ap, vec3 &b
           ap = a_diff * (v.dot(a_diff)/a_diff.dot(a_diff));
         }
       }
-      else if (count == 3) { // edge-edge or edge-pt
-        cout << ".2";
-        if (pts[0].a == pts[1].a) { //
-          cout << ".1";
-          
-          vec3 b_diff = pts[1].b - pts[0].b;
-          vec3 pt = a.collision_point(b_diff);
-          vec3 a_diff = pt - pts[0].a;
-          if ((a_diff*b_diff).lenSq() < 0.1) { // edge-edge
-            cout << ".1";
-            vec3 v = (pts[1].a - pts[1].b) * (1.0 / 2);
-            bp = pts[1].b + b_diff * (v.dot(b_diff)/b_diff.dot(b_diff));
-            ap = pts[0].a - a_diff * (v.dot(a_diff)/a_diff.dot(a_diff));
-          }
-          else {
-            cout << ".2";
-            pt = a.collision_point(b_diff * -1);
-            vec3 a_diff = pt-pts[0].a;
-            if ((a_diff*b_diff).lenSq() < 0.1) { // edge-edge
-              cout << ".1";
-              vec3 v = (pts[0].a - pts[0].b) * (1.0 / 2);
-              bp = pts[0].b + (b_diff * (v.dot(b_diff)/b_diff.dot(b_diff)));
-              ap = pts[0].a + (a_diff * -1) * (v.dot(a_diff)/a_diff.dot(a_diff));
-            }
-            else { // edge-pt
-              cout << ".2";
-              vec3 v = (pts[0].a - pts[0].b);
-              bp = pts[0].b + b_diff * (v.dot(b_diff)/b_diff.dot(b_diff));
-              ap = pts[0].a;
-            }
-          }
-        }
-        else if (pts[0].b == pts[1].b) {
-          cout << ".2";
-          vec3 a_diff = pts[1].a - pts[0].a;
-          vec3 pt = b.collision_point(a_diff);
-          vec3 b_diff = pt - pts[0].b;
-          if ((a_diff*b_diff).lenSq() < 0.1) { // edge-edge
-            cout << ".1";
-            vec3 v = (pts[1].b - pts[1].a) * (1.0 / 2);
-            ap = pts[1].a + a_diff * (v.dot(a_diff)/a_diff.dot(a_diff));
-            bp = pts[0].b - b_diff * (v.dot(b_diff)/b_diff.dot(b_diff));
-          }
-          else {
-            cout << ".2";
-            pt = b.collision_point(a_diff * -1);
-            vec3 b_diff = pt-pts[0].b;
-            if ((a_diff*b_diff).lenSq() < 0.1) { // edge-edge
-              cout << ".1";
-              vec3 v = (pts[0].b - pts[0].a) * (1.0 / 2);
-              ap = pts[0].a + (a_diff * (v.dot(a_diff)/a_diff.dot(a_diff)));
-              bp = pts[0].b + (b_diff * -1) * (v.dot(b_diff)/b_diff.dot(b_diff));
-            }
-            else { // edge-pt
-              cout << ".2";
-              vec3 v = (pts[0].b - pts[0].a);
-              ap = pts[0].a + a_diff * (v.dot(a_diff)/a_diff.dot(a_diff));
-              bp = pts[0].b;
-            }
-          }
-        }
-        else {
-          cerr << "Unexpected collision type 1" << endl;
-        }
-      }
-      else {
-        cerr << "Unexpected collision type 2" << endl;
-      }
       cout << endl;
       // else check if neighbors of odd-out pt are on same line as 2 main points
       break;
     }
     case 3: // 4, 5 or 6 points
+      vec3 &a0 = pts[2].val;
+      vec3 ab = pts[1].val - pts[2].val;
+      vec3 ac = pts[0].val - pts[2].val;
+      return ab*ac;
+    
+
+
       cout << "pts: " << pts[0].val << pts[0].a << pts[0].b << endl;
       cout << "     " << pts[1].val << pts[1].a << pts[1].b << endl;
       cout << "     " << pts[2].val << pts[2].a << pts[2].b << endl;
-      // if 3, pt-face
-      // if 6 face-face
-      //
-      int count = 6;
-      if (pts[0].a == pts[1].a) count -= 1;
-      if (pts[0].a == pts[1].b) count -= 1;
-      if (pts[0].b == pts[1].a) count -= 1;
-      if (pts[0].b == pts[1].b) count -= 1;
+
+      bool a_pt = (pts[0].a == pts[1].a || pts[0].a == pts[2].a);
+      bool a_both = (pts[0].a == pts[1].a && pts[0].a == pts[2].a);
+      bool b_pt = (pts[0].b == pts[1].b || pts[0].b == pts[2].b);
+      bool b_both = (pts[0].b == pts[1].b && pts[0].b == pts[2].b);
+      if (a_pt || b_pt) { // pt-face, edge-face
+        if (a_both || b_both) { // pt-face
+
+        }
+        else if (!b_pt) { // 'a' shares points
 
 
+        }
 
+
+      }
+      else { // face-face
+
+      }
       break;
   }
-  return true;
+  //return true;
 }
 
 

@@ -20,6 +20,7 @@ class Game {
   double updown;
   vec3 position;
   list<gameobj*> objs;
+  bool movement[4];
 
   public:
   Game();
@@ -116,16 +117,16 @@ class box : public gameobj {
 
   virtual void render() const {
     int i = 0;
+    double c = 0.2;
     glTranslated(pos.x, pos.y, pos.z);
     glBegin(GL_QUADS);
     for (vector<int>::const_iterator it = index.begin(); it != index.end();) {
-      double sum = (pts[*it].x + pts[*it].y + pts[*it].z) / 8;
-      if (sum < 0) sum *= -1;
-      glColor3d(sum, sum, sum);
+      glColor3d(c, c+0.1, c+0.2);
       glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
       glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
       glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
       glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
+      c += 0.1;
     }
     glEnd();
     glTranslated(-1*pos.x, -1*pos.y, -1*pos.z);
@@ -155,14 +156,14 @@ class tetrahedron: public gameobj {
   virtual void render() const {
     int i = 0;
     glTranslated(pos.x, pos.y, pos.z);
+    double c = 0.5;
     glBegin(GL_TRIANGLES);
     for (vector<int>::const_iterator it = index.begin(); it != index.end();) {
-      double sum = (pts[*it].x + pts[*it].y + pts[*it].z) / 8;
-      if (sum < 0) sum *= -1;
-      glColor3d(sum, sum, sum);
+      glColor3d(c, c+0.1, c);
       glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
       glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
       glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
+      c += 0.1;
     }
     glEnd();
     glTranslated(-1*pos.x, -1*pos.y, -1*pos.z);
@@ -201,11 +202,14 @@ void Game::run() {
   cout << endl;
 }
 
-Game::Game() : updown(0), leftright(0), position(0,0, 6) {
+Game::Game() : updown(0), leftright(90), position(0,0, 6) {
   close = false;
 
-  int w = 640,
-      h = 480;
+  int w = 800,
+      h = 600;
+  for (int i = 0; i < 4; i++) {
+    movement[i] = false;
+  }
 
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     throw exception();
@@ -223,8 +227,8 @@ Game::Game() : updown(0), leftright(0), position(0,0, 6) {
 
   glClearColor(0,0,0,0);
 
-//  objs.push_back(new box(vec3(), 2, 3, 4));
-  objs.push_back(new tetrahedron(vec3(), 1));
+  objs.push_back(new box(vec3(0, 4, 0), 2, 2, 2));
+  objs.push_back(new tetrahedron(vec3(), 3));
 }
 Game::~Game() {
 
@@ -251,11 +255,21 @@ void Game::resize(int w, int h) {
 
 void Game::simulate(unsigned long step) {
 
+  vec3 move;
+  const double rad = leftright*3.14159265/180;
+  if (movement[0]) move.z += 1; // up
+  if (movement[1]) move.z -= 1; // down
+  if (movement[2]) move.x += 1; // left
+  if (movement[3]) move.x -= 1; // right
+  move.norm();
 
+  double tmp = move.x*cos(rad) - move.z*sin(rad);
+  move.z = move.x*sin(rad) + move.z*cos(rad);
+  move.x = tmp;
 
-
-
-
+  move *= 4.0 * step / 1000000;
+  position += move;
+  
 
   return;
   while (step) {
@@ -324,15 +338,12 @@ void Game::render(int interp_percent) {
   glLoadIdentity();
 
 
-  glRotated(-1*updown, -1*sin((leftright-90) * 3.141592/180), 0, cos((leftright-90)*3.141592/180));
+//  glRotated(-1*updown, -1*sin((leftright-90) * 3.141592/180), 0, cos((leftright-90)*3.141592/180));
+  glRotated(-1*updown, 1, 0, 0);
   glRotated(leftright, 0, 1, 0);
-
 
   glTranslated(position.x, position.y, position.z);
   glColor3f(1.0f, 1.0f, 0.7f);
-
-
-
 
   for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
     (*it)->render();
@@ -356,16 +367,16 @@ void Game::check_events() {
             close = true;
             break;
           case SDLK_UP:
-            position += vec3(-1*sin(leftright*3.141592/180), 0, cos(leftright*3.141592/180));
+            movement[0] = true;
             break;
           case SDLK_DOWN:
-            position -= vec3(-1*sin(leftright*3.141592/180), 0, cos(leftright*3.141592/180));
+            movement[1] = true;
             break;
           case SDLK_LEFT:
-            position -= vec3(-1*sin((leftright+90)*3.141592/180), 0, cos((leftright+90)*3.141592/180));
+            movement[2] = true;
             break;
           case SDLK_RIGHT:
-            position += vec3(-1*sin((leftright+90)*3.141592/180), 0, cos((leftright+90)*3.141592/180));
+            movement[3] = true;
             break;
 
           default:
@@ -373,19 +384,27 @@ void Game::check_events() {
         }
         break;
       case SDL_KEYUP:
+        switch (e.key.keysym.sym) {
+          case SDLK_UP:
+            movement[0] = false;
+            break;
+          case SDLK_DOWN:
+            movement[1] = false;
+            break;
+          case SDLK_LEFT:
+            movement[2] = false;
+            break;
+          case SDLK_RIGHT:
+            movement[3] = false;
+            break;
+          default:
+            break;
+        }
         break;
 
       case SDL_MOUSEMOTION:
-//        cout << "x: " << (e.motion.x-200) << " y: " << (e.motion.y-200) << endl;
-//        break;
         leftright += (e.motion.x-200) / 10.0;
         updown -= (e.motion.y-200) / 10.0;
-        cout << "LR: " << leftright << " UD:" << updown << endl;
-  
-//        vec3 v(-1*sin(leftright-90), 0, cos(leftright-90));
-//        cout << v << " - " << v.len() << endl;
-
-
         break;
       case SDL_MOUSEBUTTONDOWN:
       case SDL_MOUSEBUTTONUP:

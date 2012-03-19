@@ -1,4 +1,5 @@
 
+#include <limits>
 #include <iostream>
 #include "collision.h"
 
@@ -564,6 +565,25 @@ bool collide(const collidable &a, const collidable &b) {
   std::vector<simplex_pt> pts;
   vec3 dir;
   return collide(a, b, pts, dir);
+}
+
+
+void closest_simplex(const collidable &a, const collidable &b, std::vector<simplex_pt> &pts) {
+  simplex_pt n = collision_vec(vec3(1, 0, 0), a, b);
+  cout << "val: " << n.val << " a:" << n.a << " b:" << n.b << endl;
+  pts.reserve(3);
+  pts.push_back(n);
+  vec3 dir = n.val * -1;
+  while (true) {
+    dir.norm();
+    n = collision_vec(dir, a, b);
+    cout << "val: " << n.val << " a:" << n.a << " b:" << n.b << endl;
+    if (n.val.dot(dir) - pts.back().val.dot(dir) < 0.1) {
+      break;
+    }
+    pts.push_back(n);
+    process_simplex(pts, dir);
+  }
 }
 
 bool collision_point(const collidable &a, const collidable &b, vec3 &ap, vec3 &bp, vec3 &adir, vec3 &bdir) {

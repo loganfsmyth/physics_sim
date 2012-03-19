@@ -952,9 +952,21 @@ void test_three_simplex() {
 
 int main(int argc, char** argv) {
 
+/** /
+  collidable *a, *b;
+  a = new triangle(vec3(0,0,0), vec3(1,0,0), vec3(0,1,0));
+  b = new tetrahedron(vec3(-0.5,-0.5,0), vec3(-0.5, 0.5, 0), vec3(0.5, -0.5, 0.0), vec3(0.5,0.5,0));
+  bool res = collide(*a, *b);
+  cout << "Result: " << res << endl;
+
+  return 0;
+
+/**/
+
   test_two_simplex();
 
   test_three_simplex();
+
 
 /**/
   test_point_point();

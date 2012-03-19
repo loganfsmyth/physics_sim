@@ -7,15 +7,16 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 
-#include "collide.h"
+#include "collision.h"
 
 using namespace std;
 
+
+class gameobj;
 class Game {
   bool close;
-
   float angle;
-
+  list<gameobj*> objs;
 
   public:
   Game();
@@ -29,17 +30,143 @@ class Game {
 };
 
 class gameobj: public collidable {
+  public:
+  vector<vec3> pts;
+  vector<int> index;
+  vector<vec3> normals;
+  int vert_per_poly;
+  vec3 pos;
 
-  void calcNext(unsigned long step);
-  void commit();
-  void triggerCollision(vec3 normal);
+  public:
+  gameobj(vec3 c): pos(c) { }
+  virtual void calcNext(unsigned long step);
+  virtual void commit();
+  virtual void triggerCollision(vec3 normal);
   virtual vec3 collision_point(vec3 dir) const;
-}
+  virtual void render() const = 0;
+
+};
 
 vec3 calcCollisionVector(const gameobj &a, const gameobj &b) {
-
-
+  
+  return vec3();
 }
+
+void gameobj::calcNext(unsigned long step) { }
+void gameobj::commit() { }
+void gameobj::triggerCollision(vec3 norm) { }
+vec3 gameobj::collision_point(vec3 dir) const {
+  double angle = 0;
+  vec3 max;
+
+  vector<vec3>::const_iterator it;
+
+  vec3 centroid;
+  for (it = pts.begin(); it != pts.end(); it++) {
+    centroid += *it;
+  }
+  centroid *= 1/pts.size();
+
+  for (it = pts.begin(); it != pts.end(); it++) {
+    vec3 pt = *it-centroid;
+    double a = pt.dot(dir)/(pt.len()*dir.len());
+    if (a > angle) {
+      angle = a;
+      max = *it;
+    }
+  }
+  return max + pos;
+}
+
+
+class box : public gameobj {
+
+  void init(vec3 c, double w, double h, double l) {
+    vert_per_poly = 4;
+    pts.reserve(8);
+    pts.push_back(vec3(-w/2, -h/2, -l/2));
+    pts.push_back(vec3( w/2, -h/2, -l/2));
+    pts.push_back(vec3(-w/2,  h/2, -l/2));
+    pts.push_back(vec3( w/2,  h/2, -l/2));
+    pts.push_back(vec3(-w/2, -h/2, l/2));
+    pts.push_back(vec3( w/2, -h/2, l/2));
+    pts.push_back(vec3(-w/2,  h/2, l/2));
+    pts.push_back(vec3( w/2,  h/2, l/2));
+
+    index.reserve(6*4);
+    index.push_back(0); index.push_back(2); index.push_back(3); index.push_back(1); // back face
+    index.push_back(0); index.push_back(4); index.push_back(6); index.push_back(2); // left side
+    index.push_back(4); index.push_back(5); index.push_back(7); index.push_back(6); // front face
+    index.push_back(1); index.push_back(3); index.push_back(7); index.push_back(5); // right face
+    index.push_back(2); index.push_back(6); index.push_back(7); index.push_back(3); // top face
+    index.push_back(0); index.push_back(1); index.push_back(5); index.push_back(4); // bottom face
+/**/
+  }
+
+  public:
+  box(vec3 c, double w, double h, double l): gameobj(c) {
+    init(c, w, h, l);
+  }
+  box(vec3 c, double w) : gameobj(c) {
+    init(c, w, w, w);
+  }
+
+  virtual void render() const {
+    int i = 0;
+    glTranslated(pos.x, pos.y, pos.z);
+    glBegin(GL_QUADS);
+    for (vector<int>::const_iterator it = index.begin(); it != index.end();) {
+      double sum = (pts[*it].x + pts[*it].y + pts[*it].z) / 8;
+      if (sum < 0) sum *= -1;
+      glColor3d(sum, sum, sum);
+      glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
+      glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
+      glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
+      glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
+    }
+    glEnd();
+    glTranslated(-1*pos.x, -1*pos.y, -1*pos.z);
+  }
+};
+
+class tetrahedron: public gameobj {
+  void init(double w) {
+    vert_per_poly = 3;
+    pts.reserve(4);
+    pts.push_back(vec3(   0, w/2, 0));
+    pts.push_back(vec3(   0,-w/2,-w/2));
+    pts.push_back(vec3(-w/2,-w/2, w/2));
+    pts.push_back(vec3( w/2,-w/2, w/2));
+
+    index.reserve(4*3);
+    index.push_back(0); index.push_back(2); index.push_back(3);
+    index.push_back(0); index.push_back(3); index.push_back(1);
+    index.push_back(0); index.push_back(1); index.push_back(2);
+    index.push_back(3); index.push_back(2); index.push_back(1);
+  }
+
+  public:
+  tetrahedron(vec3 c, double w): gameobj(c) {
+    init(w);
+  }
+  virtual void render() const {
+    int i = 0;
+    glTranslated(pos.x, pos.y, pos.z);
+    glBegin(GL_TRIANGLES);
+    for (vector<int>::const_iterator it = index.begin(); it != index.end();) {
+      double sum = (pts[*it].x + pts[*it].y + pts[*it].z) / 8;
+      if (sum < 0) sum *= -1;
+      glColor3d(sum, sum, sum);
+      glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
+      glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
+      glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
+    }
+    glEnd();
+    glTranslated(-1*pos.x, -1*pos.y, -1*pos.z);
+  }
+
+};
+
 
 void Game::run() {
   using namespace boost::posix_time;
@@ -89,6 +216,9 @@ Game::Game() {
   glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
   glClearColor(0,0,0,0);
+
+//  objs.push_back(new box(vec3(), 2, 3, 4));
+  objs.push_back(new tetrahedron(vec3(), 1));
 }
 Game::~Game() {
 
@@ -114,30 +244,41 @@ void Game::resize(int w, int h) {
 }
 
 void Game::simulate(unsigned long step) {
+
+
+
+
+
+
+
+  return;
   while (step) {
-    for (list<gameobj>::iterator it = objs.begin(); it != objs.end(); it++) {
-      it->calcNext(step);
+    for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
+      (*it)->calcNext(step);
     }
     list<pair<gameobj*,gameobj*> > had_collision;
     for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
       for (list<gameobj*>::iterator it2 = objs.begin(); it2 != objs.end(); it++) {
         if (collide(**it, **it2)) {
-          had_collision.push_back(pair(*it, *it2));
+          had_collision.push_back(pair<gameobj*,gameobj*>(*it, *it2));
         }
       }
     }
     if (had_collision.size()) {
       int min = 0, max = step, mid;
+      list<pair<gameobj*,gameobj*> >::iterator hit_it;
+      list<gameobj*>::iterator it;
       while ( min <= max) {
         mid = (max+min)/2;
-        it->calcNext(mid);
-        list<pair<gameobj*,gameobj*> >::iterator it;
+        for (it = objs.begin(); it != objs.end(); it++) {
+          (*it)->calcNext(mid);
+        }
         list<pair<gameobj*,gameobj*> > new_had_collision;
         bool hit = false;
-        for (it = had_collision.begin(); it != had_collision.end(); it++) {
-          if (collide(*(it->first), *(it->second))) {
+        for (hit_it = had_collision.begin(); hit_it != had_collision.end(); hit_it++) {
+          if (collide(*(hit_it->first), *(hit_it->second))) {
             hit = true;
-            new_had_collision.push_back(*it);
+            new_had_collision.push_back(*hit_it);
           }
         }
         if (hit) {
@@ -149,12 +290,12 @@ void Game::simulate(unsigned long step) {
         }
       }
       if (max > 0) {
-        for (list<gameobj>::iterator it = objs.begin(); it != objs.end(); it++) {
-          it->calcNext(max);
-          it->commit();
+        for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
+          (*it)->calcNext(max);
+          (*it)->commit();
         }
-        for (it = had_collision.begin(); it != had_colission.end(); it++) {
-          gameobj* f = it->first, s = it->second;
+        for (hit_it = had_collision.begin(); hit_it != had_collision.end(); hit_it++) {
+          gameobj *f = hit_it->first, *s = hit_it->second;
           vec3 v = calcCollisionVector(*f, *s);
           f->triggerCollision(v);
           s->triggerCollision(v * -1);
@@ -171,72 +312,6 @@ void Game::simulate(unsigned long step) {
   }
 }
 
-
-
-void plane(GLfloat w, GLfloat h, int axis = 0) {
-  // axis: xy:0, yz:1, xz:2
-
-  GLfloat pts[4][3];
-  GLfloat* start = (GLfloat*)pts;
-  fill(start, start+4*3, (GLfloat)0.0f);
-  GLfloat x1 = -1*w/2,
-          x2 = w/2,
-          y1 = -1*h/2,
-          y2 = h/2;
-
-
-  switch (axis) {
-    case 0:
-      pts[0][0] = x1; pts[0][1] = y1;
-      pts[1][0] = x1; pts[1][1] = y2;
-      pts[2][0] = x2; pts[2][1] = y2;
-      pts[3][0] = x2; pts[3][1] = y1;
-      break;
-    case 1:
-      pts[0][1] = x1; pts[0][2] = y1;
-      pts[1][1] = x1; pts[1][2] = y2;
-      pts[2][1] = x2; pts[2][2] = y2;
-      pts[3][1] = x2; pts[3][2] = y1;
-      break;
-    case 2:
-
-      pts[0][0] = x1; pts[0][2] = y1;
-      pts[1][0] = x1; pts[1][2] = y2;
-      pts[2][0] = x2; pts[2][2] = y2;
-      pts[3][0] = x2; pts[3][2] = y1;
-      break;
-  }
-
-  glBegin(GL_QUADS);
-  for (int i = 0; i < 4; i++) {
-    glColor3f(pts[i][0], pts[i][1], pts[i][2]);
-    glVertex3f(pts[i][0], pts[i][1], pts[i][2]);
-  }
-  glEnd();
-}
-
-void box(GLfloat h, GLfloat w, GLfloat l) {
-  glPushMatrix();
-
-  glTranslatef(0.0f, 0.0f, -1*l/2);
-  plane(w, h);
-  glTranslatef(0.0f, 0.0f, l);
-  plane(w, h);
-
-  glTranslatef(-1*w/2, 0.0f, -1*l/2);
-  plane(l, h, 1);
-  glTranslatef(w, 0.0f, 0.0f);
-  plane(l, h, 1);
-
-  glTranslatef(-1*w/2, -1*h/2, 0.0f);
-  plane(l, w, 2);
-  glTranslatef(0.0f, h, 0.0f);
-  plane(l, w, 2);
-
-  glPopMatrix();
-}
-
-
 void Game::render(int interp_percent) {
 
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -245,10 +320,12 @@ void Game::render(int interp_percent) {
 
   glTranslatef(0.0f, -1.0f, -6.0f);
   glColor3f(1.0f, 1.0f, 0.7f);
-  plane(20.0f, 20.0f, 2);
 
   glRotatef(angle, 0.0f, 1.0f, 0.0f);
-  box(1.0f, 1.0f, 1.0f);
+
+  for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
+    (*it)->render();
+  }
 
   SDL_GL_SwapBuffers();
 }
@@ -262,7 +339,7 @@ void Game::check_events() {
       case SDL_ACTIVEEVENT:
         break;
       case SDL_KEYDOWN:
-        angle += 4;
+        angle += 14;
         break;
       case SDL_KEYUP:
 

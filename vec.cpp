@@ -5,6 +5,7 @@
 
 std::ostream& operator<<(std::ostream& s, vec3& v) {
   s << "(" << v.x << ", " << v.y << ", " << v.z << ")";
+  return s;
 }
 
 vec3::vec3() {

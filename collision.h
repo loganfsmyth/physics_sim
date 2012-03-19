@@ -21,3 +21,4 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir);
 bool collide(const collidable &a, const collidable &b);
 bool collide(const collidable &a, const collidable &b, std::vector<simplex_pt> &pts, vec3 &dir);
 
+bool collision_point(const collidable &a, const collidable &b, vec3 &ap, vec3 &bp, vec3 &adir, vec3 &bdir);

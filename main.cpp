@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include <list>
+#include <cmath>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <SDL/SDL.h>
 #include <GL/gl.h>
@@ -15,7 +16,9 @@ using namespace std;
 class gameobj;
 class Game {
   bool close;
-  float angle;
+  double leftright;
+  double updown;
+  vec3 position;
   list<gameobj*> objs;
 
   public:
@@ -192,13 +195,14 @@ void Game::run() {
 
     cout << (1000000.0/delta) << "\r";
     render(100*accum/step);
+
+    SDL_WarpMouse(200,200);
   }
   cout << endl;
 }
 
-Game::Game() {
+Game::Game() : updown(0), leftright(0), position(0,0, 6) {
   close = false;
-  angle = 0.0f;
 
   int w = 640,
       h = 480;
@@ -206,6 +210,8 @@ Game::Game() {
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     throw exception();
   }
+  SDL_WM_GrabInput(SDL_GRAB_ON);
+  SDL_ShowCursor(0);
 
   resize(w, h);
 
@@ -318,14 +324,20 @@ void Game::render(int interp_percent) {
   glLoadIdentity();
 
 
-  glTranslatef(0.0f, -1.0f, -6.0f);
+  glRotated(-1*updown, -1*sin((leftright-90) * 3.141592/180), 0, cos((leftright-90)*3.141592/180));
+  glRotated(leftright, 0, 1, 0);
+
+
+  glTranslated(position.x, position.y, position.z);
   glColor3f(1.0f, 1.0f, 0.7f);
 
-  glRotatef(angle, 0.0f, 1.0f, 0.0f);
+
+
 
   for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
     (*it)->render();
   }
+
 
   SDL_GL_SwapBuffers();
 }
@@ -339,11 +351,42 @@ void Game::check_events() {
       case SDL_ACTIVEEVENT:
         break;
       case SDL_KEYDOWN:
-        angle += 14;
+        switch (e.key.keysym.sym) {
+          case SDLK_ESCAPE:
+            close = true;
+            break;
+          case SDLK_UP:
+            position += vec3(-1*sin(leftright*3.141592/180), 0, cos(leftright*3.141592/180));
+            break;
+          case SDLK_DOWN:
+            position -= vec3(-1*sin(leftright*3.141592/180), 0, cos(leftright*3.141592/180));
+            break;
+          case SDLK_LEFT:
+            position -= vec3(-1*sin((leftright+90)*3.141592/180), 0, cos((leftright+90)*3.141592/180));
+            break;
+          case SDLK_RIGHT:
+            position += vec3(-1*sin((leftright+90)*3.141592/180), 0, cos((leftright+90)*3.141592/180));
+            break;
+
+          default:
+            break;
+        }
         break;
       case SDL_KEYUP:
+        break;
 
       case SDL_MOUSEMOTION:
+//        cout << "x: " << (e.motion.x-200) << " y: " << (e.motion.y-200) << endl;
+//        break;
+        leftright += (e.motion.x-200) / 10.0;
+        updown -= (e.motion.y-200) / 10.0;
+        cout << "LR: " << leftright << " UD:" << updown << endl;
+  
+//        vec3 v(-1*sin(leftright-90), 0, cos(leftright-90));
+//        cout << v << " - " << v.len() << endl;
+
+
+        break;
       case SDL_MOUSEBUTTONDOWN:
       case SDL_MOUSEBUTTONUP:
         break;

@@ -20,15 +20,6 @@ struct simplex_pt {
   simplex_pt();
 };
 
-bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir);
-bool collide(const collidable &a, const collidable &b);
-bool collide(const collidable &a, const collidable &b, std::vector<simplex_pt> &pts, vec3 &dir);
-
-vec3 collision_point(collidable &a,collidable &b, vec3 &ap, vec3 &bp, vec3 &adir, vec3 &bdir);
-
-
-std::list<vec3> collision_points(collidable &a, vec3 &n, vec3 perp, vec3 &pt, int samples);
-
 struct epa_tri {
   simplex_pt a, b, c;
   vec3 norm;
@@ -38,10 +29,14 @@ struct epa_tri {
 };
 
 
+bool collide(const collidable &a, const collidable &b);
+bool collide(const collidable &a, const collidable &b, std::vector<simplex_pt> &pts, vec3 &dir);
 
 epa_tri epa(const collidable &one, const collidable &two, std::vector<simplex_pt> &pts);
-
-
 bool contact_points(const collidable &a, const collidable &b, std::list<vec3> &a_pts, std::list<vec3> &b_pts, vec3 &sep);
 
+
+// Exposed for unit testing, should not be used.
+bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir);
+std::list<vec3> collision_points(collidable &a, vec3 &n, vec3 perp, vec3 &pt, int samples);
 

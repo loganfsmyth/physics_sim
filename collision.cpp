@@ -52,7 +52,10 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
       cerr << "ab:" << ab << " = " << "a0:" <<a0 << " = v:" << v << endl;
 #endif
 
-      if (dist > 0) {
+      if (dist == 0) { // avoid (0,0,0) cross product for point v point case
+        dir *= -1;
+      }
+      else if (dist > 0) {
         dir = (v * ab);
       }
       else {

@@ -664,9 +664,9 @@ epa_tri epa(collidable &one, collidable &two) {
              &c = pts[1],
              &d = pts[0];
 
-//  cout << "a:" << a.a << b.a << c.a << d.a << endl;
-//  cout << "b:" << a.b << b.b << c.b << d.b << endl;
-//  cout << "val" << a.val << b.val << c.val << d.val << endl;
+  cout << "a:" << a.a << b.a << c.a << d.a << endl;
+  cout << "b:" << a.b << b.b << c.b << d.b << endl;
+  cout << "val" << a.val << b.val << c.val << d.val << endl;
 
   std::list<epa_tri> tris;
   tris.push_back(epa_tri(a,b,c)); // abc
@@ -679,8 +679,8 @@ epa_tri epa(collidable &one, collidable &two) {
 
     t = epa_min_dist(tris);
 
-//    cout << "1. " << t->a.a << t->b.a << t->c.a << t->norm << endl;
-//    cout << "2. " << t->a.b << t->b.b << t->c.b << t->norm << endl;
+    cout << "1. " << t->a.a << t->b.a << t->c.a << t->norm << endl;
+    cout << "2. " << t->a.b << t->b.b << t->c.b << t->norm << endl;
     simplex_pt p = collision_vec(t->norm, one, two);
     double d = p.val.dot(t->norm);
 //    cout << distance<list<epa_tri>::iterator>(tris.begin(), tris.end()) << " - " << d << " dd " << (d*d) << " sq " << t->distSq << " dif " << (d*d - t->distSq) << endl;
@@ -691,12 +691,12 @@ epa_tri epa(collidable &one, collidable &two) {
       simplex_pt v1 = t->a,
            v2 = t->b,
            v3 = t->c;
-//      cout << "Removing " << t->a.val << t->b.val << t->c.val << t->norm << " " << t->distSq << endl;
+      cout << "Removing " << t->a.val << t->b.val << t->c.val << t->norm << " " << t->distSq << endl;
       tris.erase(t);
 
-//      cout << "Adding " << p.val << v1.val << v2.val << endl;
-//      cout << "Adding " << p.val << v2.val << v3.val << endl;
-//      cout << "Adding " << p.val << v3.val << v1.val << endl;
+      cout << "Adding " << p.val << v1.val << v2.val << endl;
+      cout << "Adding " << p.val << v2.val << v3.val << endl;
+      cout << "Adding " << p.val << v3.val << v1.val << endl;
       tris.push_back(epa_tri(p, v1, v2));
       tris.push_back(epa_tri(p, v2, v3));
       tris.push_back(epa_tri(p, v3, v1));

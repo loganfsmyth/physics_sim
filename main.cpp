@@ -261,15 +261,17 @@ void ud(collidable* a, collidable* b, vec3 &sep) {
     cout << distance(cpts.begin(), cpts.end()) << " -- " << distance(cpts2.begin(), cpts2.end()) << endl;
 
 
-    list<pair<vec3,vec3> > a_edges;
+    list<edge> a_edges;
     a->sim_pts.clear();
     a_edges.push_back(edge(t.a.a + cpts.back(), t.a.a + cpts.front()));
     for (list<vec3>::iterator it = cpts.begin(); it != cpts.end(); it++) {
+      cout << "CA" << *it << endl;
+
 //      a->sim_pts.push_back(t.a.a + *it);
       list<vec3>::iterator tmp = it;
       tmp++;
       if (tmp != cpts.end()) {
-        a_edges.push_back(pair<vec3,vec3>(t.a.a + *it, t.a.a + *tmp));
+        a_edges.push_back(edge(t.a.a + *it, t.a.a + *tmp));
       }
     }
     
@@ -279,6 +281,9 @@ void ud(collidable* a, collidable* b, vec3 &sep) {
     b->sim_pts.clear();
     b_edges.push_back(edge(t.a.a + cpts2.back(), t.a.a + cpts2.front()));
     for (list<vec3>::iterator it = cpts2.begin(); it != cpts2.end(); it++) {
+      cout << "CB" << *it << endl;
+
+
 //      b->sim_pts.push_back(t.a.b + *it);
       
       list<vec3>::iterator tmp = it;
@@ -288,109 +293,87 @@ void ud(collidable* a, collidable* b, vec3 &sep) {
       }
     }
 
-    list<edge> edges;
-    vector<edge> a_overlap, b_overlap;
+    for (list<edge>::iterator it = b_edges.begin(); it != b_edges.end(); it++) {
+      swap(it->first, it->second);
+    }
 
     for (list<edge>::iterator it = a_edges.begin(); it != a_edges.end(); it++) {
       vec3 left = it->first,
            right = it->second,
            norm = (right-left)*n;
 
-      cout << "OUTER: " << left << right << norm << endl;
+//      cout << "OUTER: " << left << right << norm << endl;
 
-      bool remove = false;
+      int count = 0;
       for (list<edge>::iterator it2 = b_edges.begin(); it2 != b_edges.end(); it2++) {
         vec3 left2 = it2->first,
              right2 = it2->second,
-             b_norm = n*(right2 - left2);
-        cout << "INNER: " << left2 << right2 << b_norm << endl;
+             b_norm = (right2 - left2) * n;
+
+        count += 1;
+//        cout << "INNER: " << left2 << right2 << b_norm << endl;
         
         bool l = norm.dot(left - left2) > 0;
         bool r = norm.dot(left - right2) > 0;
-        bool overlap = false;
+        if (!l && !r) {
 
-        if (!l || !r) {
+//          cout << "Drop" << it2->first << it2->second << endl;
           it2 = --b_edges.erase(it2);
-          cout << "OUT1" << endl;
-          if (l ^ r) {
-            overlap = true;
-          }
-        }
 
+          continue;
+        }
+        count -= 1;
+
+        bool overlap = (l ^ r);
         l = (left2 - left).dot(b_norm) > 0;
         r = (left2 - right).dot(b_norm) > 0;
-        if (!l || !r) {
-          remove = true;
-          if (overlap && l^r) {
-            cout << "POP" << endl;
-            a_overlap.push_back(edge(left, right));
-            b_overlap.push_back(edge(left2, right2));
+
+        if (overlap && l^r) {
+//          cout << "POP" << endl;
+
+//          cout << "Int: " << left << right << '-' << left2 << right2 << endl;
+
+          vec3 in = find_intersection(*it, *it2);
+        
+          if ((left - in).dot(b_norm) > 0) {
+            it->first = in;
+          }
+          else {
+            it->second = in;
+          }
+          
+          if ((left2 - in).dot(norm) > 0) {
+            it2->first = in;
+          }
+          else {
+            it2->second = in;
           }
         }
       }
 
-      if (remove) {
-        cout << "OUT2" << endl;
+      if (count == 0) {
+//        cout << "Remove " << it->first << it->second << endl;
         it = --a_edges.erase(it);
       }
     }
 
+    list<edge> edges = a_edges;
+    edges.insert(edges.end(), b_edges.begin(),b_edges.end());
 
-    cout << "A" << endl;
     for (list<edge>::iterator it = a_edges.begin(); it != a_edges.end(); it++) {
-      cout << it->first << it->second << endl;
-      edges.push_back(*it);
+      cout << "A: " << it->first << " " << it->second << endl;
     }
-    cout << "B" << endl;
     for (list<edge>::iterator it = b_edges.begin(); it != b_edges.end(); it++) {
-      cout << it->first << it->second << endl;
-      edges.push_back(*it);
+      cout << "B: " << it->first << " " << it->second << endl;
     }
 
-    cout << a_overlap.size() << " HM " << b_overlap.size() << endl;
 
-    if (a_overlap.size() == 2 && b_overlap.size() == 2) {
-      if (a_overlap[0] == a_overlap[1]) {
-        vec3 pt = find_intersection(a_overlap[0], b_overlap[0]);
-        edges.push_back(edge(b_overlap[0].first, pt));
-        vec3 pt2 = find_intersection(a_overlap[1], b_overlap[1]);
-        edges.push_back(edge(pt2, b_overlap[1].second));
-        edges.push_back(edge(pt, pt2));
-      }
-      else if (b_overlap[0] == b_overlap[1]) {
-        vec3 pt = find_intersection(b_overlap[0], a_overlap[0]);
-        edges.push_back(edge(a_overlap[0].first, pt));
-        vec3 pt2 = find_intersection(b_overlap[1], a_overlap[1]);
-        edges.push_back(edge(pt2, a_overlap[1].second));
-        edges.push_back(edge(pt, pt2));
-      }
-      else {
-        vec3 pt = find_intersection(a_overlap[0], b_overlap[0]);
-        edges.push_back(edge(a_overlap[0].first, pt));
-        edges.push_back(edge(pt, b_overlap[0].second));
-
-        vec3 pt2 = find_intersection(a_overlap[1], b_overlap[1]);
-        edges.push_back(edge(a_overlap[1].first, pt2));
-        edges.push_back(edge(pt2, b_overlap[1].second));
-      }
-    }
-/*
-    cout << "AO" << endl;
-    for (vector<edge>::iterator it = a_overlap.begin(); it != a_overlap.end(); it++) {
-      cout << it->first << it->second << endl;
-    }
-    cout << "BO" << endl;
-    for (vector<edge>::iterator it = b_overlap.begin(); it != b_overlap.end(); it++) {
-      cout << it->first << it->second << endl;
-    }
-    */
     cout << "DONE" << endl;
     for (list<edge>::iterator it = edges.begin(); it != edges.end(); it++) {
       a->sim_pts.push_back(it->first);
       //b->sim_pts.push_back(it->first);
       cout << it->first << it->second << endl;
     }
-    
 
   }
   catch (exception &e) {

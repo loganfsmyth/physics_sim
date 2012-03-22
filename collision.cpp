@@ -1,11 +1,14 @@
 
+#include <list>
 #include <limits>
 #include <iostream>
 #include "collision.h"
+#include <cmath>
 
 using std::cout;
 using std::cerr;
 using std::endl;
+using namespace std;
 
 #define COLLISION_DEBUG 1
 
@@ -34,9 +37,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
       break;
     case 1: {
       vec3 &a = pts[0].val;
-      if (a.lenSq() == 0) {
-        return true;
-      }
       break;
     }
     case 2: {
@@ -52,10 +52,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
       cerr << "ab:" << ab << " = " << "a0:" <<a0 << " = v:" << v << endl;
 #endif
 
-      if (v.lenSq() == 0) {
-        return true;
-      }
-      else if (dist > 0) {
+      if (dist > 0) {
         dir = (v * ab);
       }
       else {
@@ -567,6 +564,43 @@ bool collide(const collidable &a, const collidable &b) {
   return collide(a, b, pts, dir);
 }
 
+void rotateVec(vec3 &v, double angle, const vec3 &ax) {
+  double c = cos(angle);
+  double s = sin(angle);
+
+  double x = v.x*c;
+  double y = v.y*c;
+  double z = v.z*c;
+
+  x += s * (-1*ax.z*v.y + ax.y*v.z);
+  y += s * (ax.z*v.x - ax.x*v.z);
+  z += s * (-1*ax.y*v.x + ax.x*v.y);
+
+  x += (1-c) * ( ax.x*ax.x*v.x + ax.x*ax.y*v.y + ax.x*ax.z*v.z );
+  y += (1-c) * ( ax.x*ax.y*v.x + ax.y*ax.y*v.y + ax.y*ax.z*v.z );
+  z += (1-c) * ( ax.x*ax.z*v.x + ax.y*ax.z*v.y + ax.z*ax.z*v.z );
+
+  v.x = x;
+  v.y = y;
+  v.z = z;
+}
+
+
+list<vec3> collision_points(collidable &a, vec3 &n, vec3 perp, vec3 &pt, int samples) {
+  double angle = 2*3.1415926535 / samples;
+  list<vec3> pts;
+  for (int i = 0; i < samples; i++) {
+    vec3 to_vert = a.collision_point(n + perp) - pt;
+    vec3 on_plane = to_vert - n * n.dot(to_vert);
+    pts.push_back(to_vert);
+    rotateVec(perp, angle, n);
+  }
+
+  return pts;
+}
+
+
+
 
 void closest_simplex(const collidable &a, const collidable &b, std::vector<simplex_pt> &pts) {
   simplex_pt n = collision_vec(vec3(1, 0, 0), a, b);
@@ -586,7 +620,91 @@ void closest_simplex(const collidable &a, const collidable &b, std::vector<simpl
   }
 }
 
-vec3 collision_point(const collidable &a, const collidable &b, vec3 &ap, vec3 &bp, vec3 &adir, vec3 &bdir) {
+
+epa_tri::epa_tri(simplex_pt &a, simplex_pt &b, simplex_pt &c) : a(a), b(b), c(c) {
+  distSq = -1;
+  ab = b.val-a.val;
+  ac = c.val-a.val;
+  bc = c.val-b.val;
+  norm = ab*ac;
+}
+
+list<epa_tri>::iterator epa_min_dist(std::list<epa_tri> &tris) {
+  double min = numeric_limits<double>::infinity();
+  list<epa_tri>::iterator closest;
+
+  for (list<epa_tri>::iterator it = tris.begin(); it != tris.end(); it++) {
+//    cout << "Start" << endl;
+    if (it->distSq == -1) {
+      vec3 v = it->norm * ((it->a.val * -1).dot(it->norm) / it->norm.dot(it->norm));
+      it->distSq = v.lenSq();
+    }
+    if (it->distSq < min) {
+//      cout << "set" << endl;
+      closest = it;
+      min = it->distSq;
+    }
+//    cout << "End" << endl;
+  }
+  return closest;
+}
+
+epa_tri epa(collidable &one, collidable &two) {
+
+  std::vector<simplex_pt> pts;
+  closest_simplex(one, two, pts);
+  if (pts.size() != 4) throw exception();
+
+  simplex_pt &a = pts[3],
+             &b = pts[2],
+             &c = pts[1],
+             &d = pts[0];
+
+  std::list<epa_tri> tris;
+  tris.push_back(epa_tri(a,b,c)); // abc
+  tris.push_back(epa_tri(a,c,d)); // acd
+  tris.push_back(epa_tri(a,d,b)); // adb
+  tris.push_back(epa_tri(d,c,b)); // dcb
+
+  list<epa_tri>::iterator t;
+  while (true) {
+    t = epa_min_dist(tris);
+    simplex_pt p = collision_vec(t->norm, one, two);
+    double d = p.val.dot(t->norm);
+    if (d*d - t->distSq < 0.001) {
+      break;
+    }
+    else {
+      simplex_pt v1 = t->a,
+           v2 = t->b,
+           v3 = t->c;
+      tris.erase(t);
+      if (v1 != v2) {
+        tris.push_back(epa_tri(p, v1, v2));
+      }
+      if (v2 != v3) {
+        tris.push_back(epa_tri(p, v2, v3));
+      }
+      if (v1 != v3) {
+        tris.push_back(epa_tri(p, v3, v1));
+      }
+    }
+  }
+
+  return *t;
+}
+
+
+enum surface_type { pt, line, triangle };
+struct type_info {
+  surface_type type;
+  vec3 a;
+  vec3 b;
+  vec3 c;
+  collidable *col;
+};
+
+vec3 collision_point(collidable &a, collidable &b, vec3 &ap, vec3 &bp, vec3 &adir, vec3 &bdir) {
   std::vector<simplex_pt> pts;
   closest_simplex(a, b, pts);
 

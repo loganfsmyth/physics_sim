@@ -12,6 +12,7 @@
 
 using namespace std;
 
+const int mouseoffset = 200;
 
 class gameobj;
 class Game {
@@ -153,7 +154,18 @@ class box : public gameobj {
       c += 0.1;
     }
     glEnd();
+
     glTranslated(-1*pos.x, -1*pos.y, -1*pos.z);
+    
+    
+    glPointSize(10);
+    glBegin(GL_POINTS);
+    glColor3d(1.0, 0, 0);
+    for (vector<vec3>::const_iterator it = sim_pts.begin(); it != sim_pts.end(); it++) {
+      const vec3 &v = *it;
+      glVertex3d(it->x, it->y, it->z);
+    }
+    glEnd();
   }
 };
 
@@ -190,11 +202,66 @@ class tetrahedron: public gameobj {
       c += 0.1;
     }
     glEnd();
+
     glTranslated(-1*pos.x, -1*pos.y, -1*pos.z);
+    
+    glPointSize(10);
+    glBegin(GL_POINTS);
+    glColor3d(1.0, 0, 0);
+    for (vector<vec3>::const_iterator it = sim_pts.begin(); it != sim_pts.end(); it++) {
+      const vec3 &v = *it;
+      glVertex3d(it->x, it->y, it->z);
+    }
+    glEnd();
+
   }
 
 
 };
+
+
+void ud(collidable* a, collidable* b, vec3 &sep) {
+/*
+  vector<simplex_pt> p;
+  collide(*a, *b, p, sep);
+  a->sim_pts.clear();
+  b->sim_pts.clear();
+
+  for (std::vector<simplex_pt>::reverse_iterator it = p.rbegin(); it < p.rend(); it++) {
+    a->sim_pts.push_back(it->a);
+    b->sim_pts.push_back(it->b);
+  }
+*/
+  a->sim_pts.clear();
+  b->sim_pts.clear();
+
+  try {
+    epa_tri t = epa(*a, *b);
+    vec3 n = t.norm;
+
+    vec3 perp = n*vec3(1.12345, 0.6543, 0.987564);
+    perp *= 0.1 / perp.len();
+    list<vec3> cpts = collision_points(*a, n, perp, t.a.a, 4);
+    sep = n;
+    a->sim_pts.clear();
+    for (list<vec3>::iterator it = cpts.begin(); it != cpts.end(); it++) {
+      a->sim_pts.push_back(t.a.a + *it);
+    }
+
+/*
+    a->sim_pts.push_back(t.a.a);
+    a->sim_pts.push_back(t.b.a);
+    a->sim_pts.push_back(t.c.a);
+    
+    b->sim_pts.push_back(t.a.b);
+    b->sim_pts.push_back(t.b.b);
+    b->sim_pts.push_back(t.c.b);
+    */
+  }
+  catch (exception &e) {
+    cout << "NOT COLLIDING" << endl;
+  }
+}
 
 
 void Game::run() {
@@ -222,12 +289,12 @@ void Game::run() {
     cout << (1000000.0/delta) << "\r";
     render(100*accum/step);
 
-    SDL_WarpMouse(200,200);
+    SDL_WarpMouse(mouseoffset,mouseoffset);
   }
   cout << endl;
 }
 
-Game::Game() : updown(0), leftright(90), position(0,0, 6) {
+Game::Game() : updown(0), leftright(-180), position(0,0, 6) {
   close = false;
 
   int w = 800,
@@ -251,15 +318,14 @@ Game::Game() : updown(0), leftright(90), position(0,0, 6) {
   glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
   glClearColor(0,0,0,0);
-
-//  objs.push_back(new box(vec3(0, 4, 0), 2, 2, 2));
-  
-
+/*
   gameobj *a = new tetrahedron(vec3(), 2),
           //*b = new tetrahedron(vec3(1, 2.01, -1), 2);
           //*b = new tetrahedron(vec3(0, 2.01, -1), 2);
           *b = new tetrahedron(vec3(0, 1, 1.7), 2);
-          
+*/
+  gameobj *a = new box(vec3(), 2),
+          *b = new box(vec3(2, 2,0), 1, 4, 1);
 
   b->rotate(180, 'y');
   for (vector<vec3>::iterator it = b->pts.begin(); it != b->pts.end(); it++) {
@@ -269,7 +335,7 @@ Game::Game() : updown(0), leftright(90), position(0,0, 6) {
   cout << endl;
 
 
-
+/*
   vec3 v(a->collision_point(vec3(0,1,0)));
   cout << v << endl;
   v = a->collision_point(vec3(0, 0, -1));
@@ -292,12 +358,16 @@ Game::Game() : updown(0), leftright(90), position(0,0, 6) {
 
   v = b->collision_point(vec3(-1, 0, 1));
   cout << v << endl;
-
+*/
   objs.push_back(a);
   objs.push_back(b);
   
   vec3 pa, pb, da, db;
-  sep = collision_point(*a, *b, pa, pb, da, db);
+  //sep = collision_point(*a, *b, pa, pb, da, db);
+
+  ud(a, b, sep);
+
+  cout << a->sim_pts.size() << " = " << b->sim_pts.size() << endl;
 
   cout << sep << "-" << pa << pb << "=" << da << db << endl;
 
@@ -341,7 +411,6 @@ void Game::simulate(unsigned long step) {
 
   move *= 4.0 * step / 1000000;
   position += move;
-  
 
   return;
   while (step) {
@@ -409,8 +478,6 @@ void Game::render(int interp_percent) {
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
   glLoadIdentity();
 
-
-//  glRotated(-1*updown, -1*sin((leftright-90) * 3.141592/180), 0, cos((leftright-90)*3.141592/180));
   glRotated(-1*updown, 1, 0, 0);
   glRotated(leftright, 0, 1, 0);
 
@@ -427,18 +494,20 @@ void Game::render(int interp_percent) {
     glVertex3d( v.x,  v.y,  v.z);
   glEnd();
 
+  glFinish();
   SDL_GL_SwapBuffers();
 }
 
 
 void Game::check_events() {
-
   SDL_Event e;
   while (SDL_PollEvent(&e)) {
     switch (e.type) {
       case SDL_ACTIVEEVENT:
         break;
       case SDL_KEYDOWN:
+        cout << "UpDown: " << updown << " Leftright:" << leftright << " pos:" << position << endl;
+
         switch (e.key.keysym.sym) {
           case SDLK_ESCAPE:
             close = true;
@@ -455,7 +524,36 @@ void Game::check_events() {
           case SDLK_RIGHT:
             movement[3] = true;
             break;
-
+          case SDLK_e:
+            (*(++objs.begin()))->pos += vec3(0, 0.1, 0);
+            break;
+          case SDLK_q:
+            (*(++objs.begin()))->pos -= vec3(0, 0.1, 0);
+            break;
+          case SDLK_w:
+            (*(++objs.begin()))->pos += vec3(0.1, 0, 0);
+            break;
+          case SDLK_s:
+            (*(++objs.begin()))->pos -= vec3(0.1, 0, 0);
+            break;
+          case SDLK_a:
+            (*(++objs.begin()))->pos += vec3(0, 0, 0.1);
+            break;
+          case SDLK_d:
+            (*(++objs.begin()))->pos -= vec3(0, 0, 0.1);
+            break;
+          case SDLK_1:
+            (*(++objs.begin()))->rotate(15, 'x');
+            break;
+          case SDLK_2:
+            (*(++objs.begin()))->rotate(-15, 'x');
+            break;
+          case SDLK_3:
+            (*(++objs.begin()))->rotate(15, 'y');
+            break;
+          case SDLK_4:
+            (*(++objs.begin()))->rotate(-15, 'y');
+            break;
           default:
             break;
         }
@@ -474,14 +572,23 @@ void Game::check_events() {
           case SDLK_RIGHT:
             movement[3] = false;
             break;
-          default:
+
+          default: {
+            collidable *a = *objs.begin();
+            collidable *b = *++objs.begin();
+            vec3 pa, pb, da, db;
+
+            ud(a, b, sep);
             break;
+          }
         }
         break;
 
       case SDL_MOUSEMOTION:
-        leftright += (e.motion.x-200) / 10.0;
-        updown -= (e.motion.y-200) / 10.0;
+        if (abs(e.motion.x-mouseoffset) < mouseoffset) { // limit x to box around 0,0
+          leftright += (e.motion.x-mouseoffset) / 10.0;
+          updown -= (e.motion.y-mouseoffset) / 10.0;
+        }
         break;
       case SDL_MOUSEBUTTONDOWN:
       case SDL_MOUSEBUTTONUP:

@@ -3,7 +3,7 @@
 #include "vec.h"
 #include <cmath>
 
-std::ostream& operator<<(std::ostream& s, vec3& v) {
+std::ostream& operator<<(std::ostream& s, const vec3& v) {
   s << "(" << v.x << ", " << v.y << ", " << v.z << ")";
   return s;
 }

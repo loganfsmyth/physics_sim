@@ -27,9 +27,9 @@ class vec3 {
     vec3 operator-(const vec3& v) const;
     vec3 operator+(const vec3& v) const;
 
-    friend std::ostream& operator<<(std::ostream&,vec3&);
+    friend std::ostream& operator<<(std::ostream&,const vec3&);
 
 };
 
-std::ostream& operator<<(std::ostream& s, vec3& v);
+std::ostream& operator<<(std::ostream& s, const vec3& v);
 

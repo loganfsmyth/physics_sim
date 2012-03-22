@@ -238,14 +238,21 @@ void ud(collidable* a, collidable* b, vec3 &sep) {
   try {
     epa_tri t = epa(*a, *b);
     vec3 n = t.norm;
-
+    sep = n;
     vec3 perp = n*vec3(1.12345, 0.6543, 0.987564);
     perp *= 0.1 / perp.len();
     list<vec3> cpts = collision_points(*a, n, perp, t.a.a, 4);
-    sep = n;
+    vec3 inv = n*-1;
+    list<vec3> cpts2 = collision_points(*b, inv, perp, t.a.b, 4);
+
     a->sim_pts.clear();
     for (list<vec3>::iterator it = cpts.begin(); it != cpts.end(); it++) {
       a->sim_pts.push_back(t.a.a + *it);
+    }
+    
+    b->sim_pts.clear();
+    for (list<vec3>::iterator it = cpts2.begin(); it != cpts2.end(); it++) {
+      b->sim_pts.push_back(t.a.b + *it);
     }
 
 /*
@@ -500,6 +507,8 @@ void Game::render(int interp_percent) {
 
 
 void Game::check_events() {
+  double step = 0.1;
+
   SDL_Event e;
   while (SDL_PollEvent(&e)) {
     switch (e.type) {
@@ -525,22 +534,22 @@ void Game::check_events() {
             movement[3] = true;
             break;
           case SDLK_e:
-            (*(++objs.begin()))->pos += vec3(0, 0.1, 0);
+            (*(++objs.begin()))->pos += vec3(0, step, 0);
             break;
           case SDLK_q:
-            (*(++objs.begin()))->pos -= vec3(0, 0.1, 0);
+            (*(++objs.begin()))->pos -= vec3(0, step, 0);
             break;
           case SDLK_w:
-            (*(++objs.begin()))->pos += vec3(0.1, 0, 0);
+            (*(++objs.begin()))->pos += vec3(step, 0, 0);
             break;
           case SDLK_s:
-            (*(++objs.begin()))->pos -= vec3(0.1, 0, 0);
+            (*(++objs.begin()))->pos -= vec3(step, 0, 0);
             break;
           case SDLK_a:
-            (*(++objs.begin()))->pos += vec3(0, 0, 0.1);
+            (*(++objs.begin()))->pos += vec3(0, 0, step);
             break;
           case SDLK_d:
-            (*(++objs.begin()))->pos -= vec3(0, 0, 0.1);
+            (*(++objs.begin()))->pos -= vec3(0, 0, step);
             break;
           case SDLK_1:
             (*(++objs.begin()))->rotate(15, 'x');

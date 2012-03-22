@@ -25,7 +25,7 @@ simplex_pt collision_vec(vec3 dir, const collidable &a, const collidable &b) {
   vec3 s = one-two;
   
 #if COLLISION_DEBUG
-  cerr << "one: " << one << " two: " << two << " dir: " << dir << " sum: " << s << endl;
+//  cerr << "one: " << one << " two: " << two << " dir: " << dir << " sum: " << s << endl;
 #endif
   simplex_pt val(s,one,two);
   return val;
@@ -627,6 +627,7 @@ epa_tri::epa_tri(simplex_pt &a, simplex_pt &b, simplex_pt &c) : a(a), b(b), c(c)
   ac = c.val-a.val;
   bc = c.val-b.val;
   norm = ab*ac;
+  norm.norm();
 }
 
 list<epa_tri>::iterator epa_min_dist(std::list<epa_tri> &tris) {
@@ -634,17 +635,14 @@ list<epa_tri>::iterator epa_min_dist(std::list<epa_tri> &tris) {
   list<epa_tri>::iterator closest;
 
   for (list<epa_tri>::iterator it = tris.begin(); it != tris.end(); it++) {
-//    cout << "Start" << endl;
     if (it->distSq == -1) {
       vec3 v = it->norm * ((it->a.val * -1).dot(it->norm) / it->norm.dot(it->norm));
       it->distSq = v.lenSq();
     }
     if (it->distSq < min) {
-//      cout << "set" << endl;
       closest = it;
       min = it->distSq;
     }
-//    cout << "End" << endl;
   }
   return closest;
 }
@@ -660,6 +658,10 @@ epa_tri epa(collidable &one, collidable &two) {
              &c = pts[1],
              &d = pts[0];
 
+//  cout << "a:" << a.a << b.a << c.a << d.a << endl;
+//  cout << "b:" << a.b << b.b << c.b << d.b << endl;
+//  cout << "val" << a.val << b.val << c.val << d.val << endl;
+
   std::list<epa_tri> tris;
   tris.push_back(epa_tri(a,b,c)); // abc
   tris.push_back(epa_tri(a,c,d)); // acd
@@ -668,9 +670,14 @@ epa_tri epa(collidable &one, collidable &two) {
 
   list<epa_tri>::iterator t;
   while (true) {
+
     t = epa_min_dist(tris);
+
+//    cout << "1. " << t->a.a << t->b.a << t->c.a << t->norm << endl;
+//    cout << "2. " << t->a.b << t->b.b << t->c.b << t->norm << endl;
     simplex_pt p = collision_vec(t->norm, one, two);
     double d = p.val.dot(t->norm);
+//    cout << distance<list<epa_tri>::iterator>(tris.begin(), tris.end()) << " - " << d << " dd " << (d*d) << " sq " << t->distSq << " dif " << (d*d - t->distSq) << endl;
     if (d*d - t->distSq < 0.001) {
       break;
     }
@@ -678,16 +685,15 @@ epa_tri epa(collidable &one, collidable &two) {
       simplex_pt v1 = t->a,
            v2 = t->b,
            v3 = t->c;
+//      cout << "Removing " << t->a.val << t->b.val << t->c.val << t->norm << " " << t->distSq << endl;
       tris.erase(t);
-      if (v1 != v2) {
-        tris.push_back(epa_tri(p, v1, v2));
-      }
-      if (v2 != v3) {
-        tris.push_back(epa_tri(p, v2, v3));
-      }
-      if (v1 != v3) {
-        tris.push_back(epa_tri(p, v3, v1));
-      }
+
+//      cout << "Adding " << p.val << v1.val << v2.val << endl;
+//      cout << "Adding " << p.val << v2.val << v3.val << endl;
+//      cout << "Adding " << p.val << v3.val << v1.val << endl;
+      tris.push_back(epa_tri(p, v1, v2));
+      tris.push_back(epa_tri(p, v2, v3));
+      tris.push_back(epa_tri(p, v3, v1));
     }
   }
 

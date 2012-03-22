@@ -293,6 +293,7 @@ void ud(collidable* a, collidable* b, vec3 &sep) {
       }
     }
 
+    // Swap B coords to find winding direction to be same as 'A'.
     for (list<edge>::iterator it = b_edges.begin(); it != b_edges.end(); it++) {
       swap(it->first, it->second);
     }

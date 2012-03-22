@@ -586,7 +586,7 @@ void rotateVec(vec3 &v, double angle, const vec3 &ax) {
 }
 
 
-list<vec3> collision_points(collidable &a, vec3 &n, vec3 perp, vec3 &pt, int samples) {
+list<vec3> collision_points(const collidable &a, vec3 &n, vec3 perp, vec3 &pt, int samples) {
   double angle = 2*3.1415926535 / samples;
   list<vec3> pts;
   for (int i = 0; i < samples; i++) {
@@ -653,11 +653,7 @@ list<epa_tri>::iterator epa_min_dist(std::list<epa_tri> &tris) {
   return closest;
 }
 
-epa_tri epa(collidable &one, collidable &two) {
-
-  std::vector<simplex_pt> pts;
-  closest_simplex(one, two, pts);
-  if (pts.size() != 4) throw exception();
+epa_tri epa(const collidable &one, const collidable &two, vector<simplex_pt> &pts) {
 
   simplex_pt &a = pts[3],
              &b = pts[2],
@@ -856,18 +852,153 @@ vec3 collision_point(collidable &a, collidable &b, vec3 &ap, vec3 &bp, vec3 &adi
       }
       break;
   }
-  //return true;
+  return vec3();
+}
+
+
+typedef pair<vec3,vec3> edge;
+
+vec3 find_intersection(edge &one, edge &two) {
+  vec3 v1 = one.second - one.first,
+       v2 = two.second - two.first;
+
+  double l = ((two.first - one.first) * v2).len() / (v1*v2).len();
+
+  return one.first + v1 * l;
+}
+
+list<edge> calculate_overlap(list<edge> a_edges, list<edge> b_edges, const vec3 &n) {
+
+  for (list<edge>::iterator it = a_edges.begin(); it != a_edges.end(); it++) {
+    vec3 left = it->first,
+          right = it->second,
+          norm = (right-left)*n;
+
+//      cout << "OUTER: " << left << right << norm << endl;
+
+    int count = 0;
+    for (list<edge>::iterator it2 = b_edges.begin(); it2 != b_edges.end(); it2++) {
+      vec3 left2 = it2->first,
+            right2 = it2->second,
+            b_norm = (right2 - left2) * n;
+
+      count += 1;
+//        cout << "INNER: " << left2 << right2 << b_norm << endl;
+      
+      bool l = norm.dot(left - left2) > 0;
+      bool r = norm.dot(left - right2) > 0;
+      if (!l && !r) {
+
+//          cout << "Drop" << it2->first << it2->second << endl;
+        it2 = --b_edges.erase(it2);
+
+        continue;
+      }
+      count -= 1;
+
+      bool overlap = (l ^ r);
+      l = (left2 - left).dot(b_norm) > 0;
+      r = (left2 - right).dot(b_norm) > 0;
+
+      if (overlap && l^r) {
+//          cout << "POP" << endl;
+
+//          cout << "Int: " << left << right << '-' << left2 << right2 << endl;
+
+        vec3 in = find_intersection(*it, *it2);
+      
+        if ((left - in).dot(b_norm) > 0) {
+          it->first = in;
+        }
+        else {
+          it->second = in;
+        }
+        
+        if ((left2 - in).dot(norm) > 0) {
+          it2->first = in;
+        }
+        else {
+          it2->second = in;
+        }
+      }
+    }
+
+    if (count == 0) {
+//        cout << "Remove " << it->first << it->second << endl;
+      it = --a_edges.erase(it);
+    }
+  }
+
+  list<edge> edges = a_edges;
+  edges.insert(edges.end(), b_edges.begin(),b_edges.end());
+
+  for (list<edge>::iterator it = a_edges.begin(); it != a_edges.end(); it++) {
+    cout << "A: " << it->first << " " << it->second << endl;
+  }
+  for (list<edge>::iterator it = b_edges.begin(); it != b_edges.end(); it++) {
+    cout << "B: " << it->first << " " << it->second << endl;
+  }
+
+  return edges;
 }
 
 
 
+bool contact_points(const collidable &a, const collidable &b, list<vec3> &a_pts, list<vec3> &b_pts, vec3 &sep) {
+  
+
+  vector<simplex_pt> sim;
+  vec3 sep_axis;
+  if (!collide(a,b,sim, sep_axis)) return false;
+
+  epa_tri t = epa(a, b, sim);
+  vec3 n = t.norm;
+  sep = n;
+  vec3 perp = n*vec3(1.12345, 0.6543, 0.987564);
+  perp *= 0.1 / perp.len();
+  list<vec3> cpts = collision_points(a, n, perp, t.a.a, 10);
+  vec3 inv = n*-1;
+  list<vec3> cpts2 = collision_points(b, inv, perp, t.a.b, 10);
+
+  cout << distance(cpts.begin(), cpts.end()) << " -- " << distance(cpts2.begin(), cpts2.end()) << endl;
 
 
+  list<edge> a_edges;
+  a_edges.push_back(edge(t.a.a + cpts.back(), t.a.a + cpts.front()));
+  for (list<vec3>::iterator it = cpts.begin(); it != cpts.end(); it++) {
+//    cout << "CA" << *it << endl;
+    list<vec3>::iterator tmp = it;
+    tmp++;
+    if (tmp != cpts.end()) {
+      a_edges.push_back(edge(t.a.a + *it, t.a.a + *tmp));
+    }
+  }
+  
 
 
+  list<edge> b_edges;
+  b_edges.push_back(edge(t.a.b + cpts2.back(), t.a.b + cpts2.front()));
+  for (list<vec3>::iterator it = cpts2.begin(); it != cpts2.end(); it++) {
+//    cout << "CB" << *it << endl;
+    list<vec3>::iterator tmp = it;
+    tmp++;
+    if (tmp != cpts2.end()) {
+      b_edges.push_back(edge(t.a.b + *it, t.a.b + *tmp));
+    }
+  }
+
+  // Swap B coords to find winding direction to be same as 'A'.
+  for (list<edge>::iterator it = b_edges.begin(); it != b_edges.end(); it++) {
+    swap(it->first, it->second);
+  }
 
 
+  list<edge> over = calculate_overlap(a_edges, b_edges, n);
 
+  for (list<edge>::iterator it = over.begin(); it != over.end(); it++) {
+    a_pts.push_back(it->first);
+    b_pts.push_back(it->first);
+  }
 
-
-
+  return true;
+}

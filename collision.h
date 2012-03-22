@@ -29,8 +29,6 @@ vec3 collision_point(collidable &a,collidable &b, vec3 &ap, vec3 &bp, vec3 &adir
 
 std::list<vec3> collision_points(collidable &a, vec3 &n, vec3 perp, vec3 &pt, int samples);
 
-void rotateVec(vec3 &v, double angle, const vec3 &ax);
-
 struct epa_tri {
   simplex_pt a, b, c;
   vec3 norm;
@@ -41,4 +39,9 @@ struct epa_tri {
 
 
 
-epa_tri epa(collidable &one, collidable &two);
+epa_tri epa(const collidable &one, const collidable &two, std::vector<simplex_pt> &pts);
+
+
+bool contact_points(const collidable &a, const collidable &b, std::list<vec3> &a_pts, std::list<vec3> &b_pts, vec3 &sep);
+
+

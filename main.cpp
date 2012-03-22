@@ -220,164 +220,21 @@ class tetrahedron: public gameobj {
 };
 
 
-typedef pair<vec3,vec3> edge;
-
-vec3 find_intersection(edge &one, edge &two) {
-  vec3 v1 = one.second - one.first,
-       v2 = two.second - two.first;
-
-  double l = ((two.first - one.first) * v2).len() / (v1*v2).len();
-
-  return one.first + v1 * l;
-}
-
 
 
 void ud(collidable* a, collidable* b, vec3 &sep) {
-/*
-  vector<simplex_pt> p;
-  collide(*a, *b, p, sep);
   a->sim_pts.clear();
   b->sim_pts.clear();
 
-  for (std::vector<simplex_pt>::reverse_iterator it = p.rbegin(); it < p.rend(); it++) {
-    a->sim_pts.push_back(it->a);
-    b->sim_pts.push_back(it->b);
+  list<vec3> a_pts, b_pts;
+  if (contact_points(*a, *b, a_pts, b_pts, sep)) {
+    cout << "Points:" << endl;
+    for (list<vec3>::iterator it = a_pts.begin(); it != a_pts.end(); it++) {
+      a->sim_pts.push_back(*it);
+      cout << *it << endl;
+    }
   }
-*/
-  a->sim_pts.clear();
-  b->sim_pts.clear();
-
-  try {
-    epa_tri t = epa(*a, *b);
-    vec3 n = t.norm;
-    sep = n;
-    vec3 perp = n*vec3(1.12345, 0.6543, 0.987564);
-    perp *= 0.1 / perp.len();
-    list<vec3> cpts = collision_points(*a, n, perp, t.a.a, 10);
-    vec3 inv = n*-1;
-    list<vec3> cpts2 = collision_points(*b, inv, perp, t.a.a, 10);
-
-    cout << distance(cpts.begin(), cpts.end()) << " -- " << distance(cpts2.begin(), cpts2.end()) << endl;
-
-
-    list<edge> a_edges;
-    a->sim_pts.clear();
-    a_edges.push_back(edge(t.a.a + cpts.back(), t.a.a + cpts.front()));
-    for (list<vec3>::iterator it = cpts.begin(); it != cpts.end(); it++) {
-      cout << "CA" << *it << endl;
-
-//      a->sim_pts.push_back(t.a.a + *it);
-      list<vec3>::iterator tmp = it;
-      tmp++;
-      if (tmp != cpts.end()) {
-        a_edges.push_back(edge(t.a.a + *it, t.a.a + *tmp));
-      }
-    }
-    
-
-
-    list<edge> b_edges;
-    b->sim_pts.clear();
-    b_edges.push_back(edge(t.a.a + cpts2.back(), t.a.a + cpts2.front()));
-    for (list<vec3>::iterator it = cpts2.begin(); it != cpts2.end(); it++) {
-      cout << "CB" << *it << endl;
-
-
-//      b->sim_pts.push_back(t.a.b + *it);
-      
-      list<vec3>::iterator tmp = it;
-      tmp++;
-      if (tmp != cpts2.end()) {
-        b_edges.push_back(edge(t.a.a + *it, t.a.a + *tmp));
-      }
-    }
-
-    // Swap B coords to find winding direction to be same as 'A'.
-    for (list<edge>::iterator it = b_edges.begin(); it != b_edges.end(); it++) {
-      swap(it->first, it->second);
-    }
-
-    for (list<edge>::iterator it = a_edges.begin(); it != a_edges.end(); it++) {
-      vec3 left = it->first,
-           right = it->second,
-           norm = (right-left)*n;
-
-//      cout << "OUTER: " << left << right << norm << endl;
-
-      int count = 0;
-      for (list<edge>::iterator it2 = b_edges.begin(); it2 != b_edges.end(); it2++) {
-        vec3 left2 = it2->first,
-             right2 = it2->second,
-             b_norm = (right2 - left2) * n;
-
-        count += 1;
-//        cout << "INNER: " << left2 << right2 << b_norm << endl;
-        
-        bool l = norm.dot(left - left2) > 0;
-        bool r = norm.dot(left - right2) > 0;
-        if (!l && !r) {
-
-//          cout << "Drop" << it2->first << it2->second << endl;
-          it2 = --b_edges.erase(it2);
-
-          continue;
-        }
-        count -= 1;
-
-        bool overlap = (l ^ r);
-        l = (left2 - left).dot(b_norm) > 0;
-        r = (left2 - right).dot(b_norm) > 0;
-
-        if (overlap && l^r) {
-//          cout << "POP" << endl;
-
-//          cout << "Int: " << left << right << '-' << left2 << right2 << endl;
-
-          vec3 in = find_intersection(*it, *it2);
-        
-          if ((left - in).dot(b_norm) > 0) {
-            it->first = in;
-          }
-          else {
-            it->second = in;
-          }
-          
-          if ((left2 - in).dot(norm) > 0) {
-            it2->first = in;
-          }
-          else {
-            it2->second = in;
-          }
-        }
-      }
-
-      if (count == 0) {
-//        cout << "Remove " << it->first << it->second << endl;
-        it = --a_edges.erase(it);
-      }
-    }
-
-    list<edge> edges = a_edges;
-    edges.insert(edges.end(), b_edges.begin(),b_edges.end());
-
-    for (list<edge>::iterator it = a_edges.begin(); it != a_edges.end(); it++) {
-      cout << "A: " << it->first << " " << it->second << endl;
-    }
-    for (list<edge>::iterator it = b_edges.begin(); it != b_edges.end(); it++) {
-      cout << "B: " << it->first << " " << it->second << endl;
-    }
-
-
-    cout << "DONE" << endl;
-    for (list<edge>::iterator it = edges.begin(); it != edges.end(); it++) {
-      a->sim_pts.push_back(it->first);
-      //b->sim_pts.push_back(it->first);
-      cout << it->first << it->second << endl;
-    }
-
-  }
-  catch (exception &e) {
+  else {
     cout << "NOT COLLIDING" << endl;
   }
 }

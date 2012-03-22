@@ -220,6 +220,19 @@ class tetrahedron: public gameobj {
 };
 
 
+typedef pair<vec3,vec3> edge;
+
+vec3 find_intersection(edge &one, edge &two) {
+  vec3 v1 = one.second - one.first,
+       v2 = two.second - two.first;
+
+  double l = ((two.first - one.first) * v2).len() / (v1*v2).len();
+
+  return one.first + v1 * l;
+}
+
+
+
 void ud(collidable* a, collidable* b, vec3 &sep) {
 /*
   vector<simplex_pt> p;

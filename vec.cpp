@@ -59,13 +59,17 @@ vec3& vec3::negate() {
 }
 
 
-bool vec3::operator==(const vec3& v) {
+bool vec3::operator==(const vec3& v) const {
   return (x == v.x && y == v.y && z == v.z);
+}
+
+bool vec3::operator<(const vec3& v) const {
+  return (x < v.x && y < v.y && z < v.z);
 }
 
 
 
-bool vec3::operator!=(const vec3& v) {
+bool vec3::operator!=(const vec3& v) const {
   return (x != v.x || y != v.y || z != v.z);
 }
 

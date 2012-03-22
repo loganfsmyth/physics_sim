@@ -592,7 +592,13 @@ list<vec3> collision_points(collidable &a, vec3 &n, vec3 perp, vec3 &pt, int sam
   for (int i = 0; i < samples; i++) {
     vec3 to_vert = a.collision_point(n + perp) - pt;
     vec3 on_plane = to_vert - n * n.dot(to_vert);
-    pts.push_back(to_vert);
+    bool found = false;
+    for (list<vec3>::iterator it = pts.begin(); it != pts.end(); it++) {
+      if (to_vert == *it) found = true;
+    }
+    if (!found) {
+      pts.push_back(to_vert);
+    }
     rotateVec(perp, angle, n);
   }
 

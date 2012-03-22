@@ -17,8 +17,9 @@ class vec3 {
     double lenSq() const;
     vec3& negate();
 
-    bool operator==(const vec3& v);
-    bool operator!=(const vec3& v);
+    bool operator==(const vec3& v) const;
+    bool operator!=(const vec3& v) const;
+    bool operator<(const vec3& v) const;
     vec3& operator+=(const vec3& v);
     vec3& operator-=(const vec3& v);
     vec3& operator*=(double factor);

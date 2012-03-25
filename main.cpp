@@ -123,6 +123,16 @@ Game::Game() : updown(0), leftright(-180) {
   objs.push_back(camera);
 //  camera->physics = false;
 
+  objs.push_back(new box(vec3(10, 5, 7), 1.25));
+  objs.push_back(new box(vec3(0, -4, -2), 2));
+  objs.push_back(new box(vec3(2, 2,0), 1, 4, 1));
+  objs.push_back(new tetrahedron(vec3(5,0,4), 2));
+  // new tetrahedron(vec3(1, 2.01, -1), 2);
+  // new tetrahedron(vec3(0, 2.01, -1), 2);
+  // new tetrahedron(vec3(0, 1, 1.7), 2);
+
+  return;
+
 /*
   gameobj *a = new tetrahedron(vec3(), 2),
           //*b = new tetrahedron(vec3(1, 2.01, -1), 2);
@@ -280,7 +290,15 @@ void Game::check_events() {
       case SDL_ACTIVEEVENT:
         break;
       case SDL_KEYDOWN:
-        cout << "UpDown: " << updown << " Leftright:" << leftright << " pos:" << position << endl;
+        cout << "UpDown: " << updown << " Leftright:" << leftright << " pos:" << camera->st.pos << endl;
+
+        for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
+          cout << "Obj:" << (*it)->st.pos << endl;
+          for (vector<vec3>::iterator it2 = (*it)->pts.begin(); it2 != (*it)->pts.end(); it2++) {
+            cout << *it2 << endl;
+          }
+        }
+
 
         switch (e.key.keysym.sym) {
           case SDLK_ESCAPE:

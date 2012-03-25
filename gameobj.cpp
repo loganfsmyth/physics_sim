@@ -28,11 +28,9 @@ Derivative evalDer(State s, int ms, Derivative &d) {
 
 void triggerCollision(gameobj& a, gameobj &b, list<vec3> pts, vec3 &n) {
   
-  a.next_st.mo -= n*(2*a.st.mo.dot(n));
-  b.next_st.mo -= n*(2*b.st.mo.dot(n));
+  a.next_st.mo -= n*(2*a.next_st.mo.dot(n));
+  b.next_st.mo -= n*(2*b.next_st.mo.dot(n));
 
-  //vec3 mo = a.st.mo + b.st.mo;
-  
 }
 
 gameobj::gameobj(vec3 c) {

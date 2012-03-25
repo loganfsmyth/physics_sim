@@ -166,6 +166,17 @@ class box : public gameobj {
       glVertex3d(it->x, it->y, it->z);
     }
     glEnd();
+    
+    glBegin(GL_LINES);
+    glColor3d(0, 1.0, 0);
+    for (vector<pair<vec3,vec3> >::const_iterator it = sim_edges.begin(); it != sim_edges.end(); it++) {
+      const pair<vec3,vec3> &v = *it;
+      const vec3 f = v.first + vec3(0.05, 0, 0);
+      const vec3 s = v.second + vec3(0.05, 0, 0);
+      glVertex3d(f.x, f.y, f.z);
+      glVertex3d(s.x, s.y, s.z);
+    }
+    glEnd();
   }
 };
 
@@ -224,13 +235,24 @@ class tetrahedron: public gameobj {
 
 void ud(collidable* a, collidable* b, vec3 &sep) {
   a->sim_pts.clear();
+  a->sim_edges.clear();
   b->sim_pts.clear();
+  b->sim_edges.clear();
+
+  cout << "============================================================================================" << endl;
+  cout << "============================================================================================" << endl;
+  cout << "============================================================================================" << endl;
 
   list<vec3> a_pts, b_pts;
   if (contact_points(*a, *b, a_pts, b_pts, sep)) {
     cout << "Points:" << endl;
     for (list<vec3>::iterator it = a_pts.begin(); it != a_pts.end(); it++) {
       a->sim_pts.push_back(*it);
+      cout << *it << endl;
+    }
+    
+    for (list<vec3>::iterator it = b_pts.begin(); it != b_pts.end(); it++) {
+      b->sim_pts.push_back(*it);
       cout << *it << endl;
     }
   }
@@ -302,6 +324,7 @@ Game::Game() : updown(0), leftright(-180), position(0,0, 6) {
 */
   gameobj *a = new box(vec3(), 2),
           *b = new box(vec3(2, 2,0), 1, 4, 1);
+          //*b = new box(vec3(0, 2,0), 1, 4, 1);
 
   b->rotate(180, 'y');
   for (vector<vec3>::iterator it = b->pts.begin(); it != b->pts.end(); it++) {
@@ -460,12 +483,18 @@ void Game::render(int interp_percent) {
   glTranslated(position.x, position.y, position.z);
   glColor3f(1.0f, 1.0f, 0.7f);
 
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
     (*it)->render();
   }
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   vec3 v = sep * 1000;
+  
+  
+
   glLineWidth(2);
   glBegin(GL_LINES);
+    glColor3d(1.0, 0, 0);
     glVertex3d(-v.x, -v.y, -v.z);
     glVertex3d( v.x,  v.y,  v.z);
   glEnd();

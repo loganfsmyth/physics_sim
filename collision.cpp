@@ -1,11 +1,13 @@
 
 #include <list>
+#include <set>
 #include <limits>
 #include <iostream>
 #include "collision.h"
 #include <cmath>
+#include <cassert>
 
-using std::cout;
+using std::cerr;
 using std::cerr;
 using std::endl;
 using namespace std;
@@ -49,7 +51,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
 
       vec3 v = (ab*a0);
 #if COLLISION_DEBUG
-      cerr << "ab:" << ab << " = " << "a0:" <<a0 << " = v:" << v << endl;
+      cerr << "ab:" << ab << " = " << "a0:" <<a0 << " = v:" << v << " =1" << endl;
 #endif
 
       if (dist == 0) { // avoid (0,0,0) cross product for point v point case
@@ -198,7 +200,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
       vec3 acd = (ac*ad);
 
 #if COLLISION_DEBUG
-      cerr << "ab: " << ab << " ac: " << ac << " ad: " << ad << " a0: " << a0 << endl;
+      cerr << "ab: " << ab << " ac: " << ac << " ad: " << ad << " a0: " << a0 << "=2" << endl;
       cerr << "abc: " << abc << " abd: " << abd << " acd: " << acd << endl;
 
       cerr << "tetra";
@@ -589,7 +591,8 @@ void rotateVec(vec3 &v, double angle, const vec3 &ax) {
 }
 
 
-list<vec3> collision_points(const collidable &a, vec3 &n, vec3 perp, vec3 &pt, int samples) {
+list<vec3> collision_points(const collidable &a, const vec3 &n, vec3 perp, const vec3 &pt, int samples) {
+  cout << "Testing Normal " << n << " with " << samples << " samples" << endl;
   double angle = 2*3.1415926535 / samples;
   list<vec3> pts;
   for (int i = 0; i < samples; i++) {
@@ -597,10 +600,11 @@ list<vec3> collision_points(const collidable &a, vec3 &n, vec3 perp, vec3 &pt, i
     vec3 on_plane = to_vert - n * n.dot(to_vert);
     bool found = false;
     for (list<vec3>::iterator it = pts.begin(); it != pts.end(); it++) {
-      if (to_vert == *it) found = true;
+      if (on_plane == *it) found = true;
     }
+
     if (!found) {
-      pts.push_back(to_vert);
+      pts.push_back(on_plane);
     }
     rotateVec(perp, angle, n);
   }
@@ -613,14 +617,14 @@ list<vec3> collision_points(const collidable &a, vec3 &n, vec3 perp, vec3 &pt, i
 
 void closest_simplex(const collidable &a, const collidable &b, std::vector<simplex_pt> &pts) {
   simplex_pt n = collision_vec(vec3(1, 0, 0), a, b);
-  cout << "val: " << n.val << " a:" << n.a << " b:" << n.b << endl;
+  cerr << "val: " << n.val << " a:" << n.a << " b:" << n.b << endl;
   pts.reserve(3);
   pts.push_back(n);
   vec3 dir = n.val * -1;
   while (true) {
     dir.norm();
     n = collision_vec(dir, a, b);
-    cout << "val: " << n.val << " a:" << n.a << " b:" << n.b << endl;
+    cerr << "val: " << n.val << " a:" << n.a << " b:" << n.b << endl;
     if (n.val.dot(dir) - pts.back().val.dot(dir) < 0.1) {
       break;
     }
@@ -630,8 +634,13 @@ void closest_simplex(const collidable &a, const collidable &b, std::vector<simpl
 }
 
 
+bool simplex_pt::operator==(const simplex_pt &p) {
+  return a == p.a && b == p.b;
+}
+
+
 epa_tri::epa_tri(simplex_pt &a, simplex_pt &b, simplex_pt &c) : a(a), b(b), c(c) {
-  distSq = -1;
+  dist = -1;
   ab = b.val-a.val;
   ac = c.val-a.val;
   bc = c.val-b.val;
@@ -644,17 +653,225 @@ list<epa_tri>::iterator epa_min_dist(std::list<epa_tri> &tris) {
   list<epa_tri>::iterator closest;
 
   for (list<epa_tri>::iterator it = tris.begin(); it != tris.end(); it++) {
-    if (it->distSq == -1) {
-      vec3 v = it->norm * ((it->a.val * -1).dot(it->norm) / it->norm.dot(it->norm));
-      it->distSq = v.lenSq();
+    if (it->dist == -1) {
+      it->dist = it->a.val.dot(it->norm);
+      if (it->dist < 0) {
+        cerr << "LT!!!!" << endl;
+      }
     }
-    if (it->distSq < min) {
+    if (it->dist < min) {
       closest = it;
-      min = it->distSq;
+      min = it->dist;
+      cerr << "MIN" << endl;
     }
+    cerr << ">v " << it->a.val << it->b.val << it->c.val << it->norm << " dist" << it->dist << endl;
   }
   return closest;
 }
+
+struct hull_edge {
+  int a, b;
+  int refs;
+  hull_edge(int a, int b) : a(a), b(b) {
+    refs = 0;
+  }
+};
+struct hull_face {
+  int e1, e2, e3;
+  bool removed;
+  hull_face(int e1, int e2, int e3) : e1(e1), e2(e2), e3(e3) {
+    removed = false;
+  }
+};
+
+
+class chull {
+  typedef simplex_pt spt;
+  typedef vector<simplex_pt> plist;
+  typedef vector<hull_edge> elist;
+  typedef vector<hull_face> flist;
+
+  plist pts;
+  elist edges;
+  flist faces;
+
+  public:
+  chull(const spt &a, const spt &b, const spt &c, const spt &d) {
+    add_pt(a);
+    add_pt(b);
+    add_pt(c);
+    add_pt(d);
+  }
+  void add_pt(const spt &p) {
+    cerr << "Adding point " << p.val << endl;
+
+    for (plist::iterator it = pts.begin(); it != pts.end(); it++) {
+      if (it->val == p.val) return;
+    }
+
+    pts.push_back(p);
+    int pos = pts.size()-1;
+
+    if (pos == 0) {
+      return;
+    }
+    else if (edges.size() == 0) {
+      addEdge(0, pos);
+      return;
+    }
+    else if (edges.size() == 1) {
+      int e1 = addEdge(0,pos);
+      int e2 = addEdge(1,pos);
+      addFace(0, e1, e2);
+      return;
+    }
+    else if (faces.size() == 1) {
+      int e1 = addEdge(0,pos);
+      int e2 = addEdge(1,pos);
+      int e3 = addEdge(2,pos);
+      addFace(0, e1, e2);
+      addFace(1, e1, e3);
+      addFace(2, e2, e3);
+      return;
+    }
+
+    list<int> possible_edges;
+    for (flist::iterator it = faces.begin(); it != faces.end(); it++) {
+      if (!it->removed && (p.val - pts[edges[it->e1].a].val).dot(fNorm(*it)) > 0) { // find faces pointing toward new pt
+        // Remove face toward new point, and add edges as possible edges for new triangles
+        fRemove(*it);
+        possible_edges.push_back(it->e1);
+        possible_edges.push_back(it->e2);
+        possible_edges.push_back(it->e3);
+      }
+    }
+
+    // Check edges of removed faces for ones still references. They are the ones along edges.
+    for (list<int>::iterator it = possible_edges.begin(); it != possible_edges.end(); it++) {
+      hull_edge &e = edges[*it];
+      cerr << "C";
+      pEdge(e);
+      if (e.refs > 0) {
+        int e1 = getEdge(e.a, pos);
+        int e2 = getEdge(e.b, pos);
+        addFace(*it, e1, e2);
+      }
+    }
+  }
+  void addFace(int e1, int e2, int e3) {
+    faces.push_back(hull_face(e1, e2, e3));
+    edges[e1].refs += 1;
+    edges[e2].refs += 1;
+    edges[e3].refs += 1;
+
+    cerr << "Add Face ";
+    pFace(faces.size()-1);
+  }
+  int addEdge(int a, int b) {
+    edges.push_back(hull_edge(a,b));
+    return edges.size()-1;
+  }
+  int getEdge(int a, int b) {
+    int i = 0;
+    for (elist::iterator it = edges.begin(); it != edges.end(); it++, i++) {
+      if ((it->a == a && it->b == b) || (it->b == a && it->a == b)) {
+        return i;
+      }
+    }
+    addEdge(a,b);
+    return edges.size()-1;
+  }
+  void fRemove(hull_face &f) {
+    cerr << "Remove face ";
+    pFace(f);
+
+    f.removed = true;
+    edges[f.e1].refs -= 1;
+    edges[f.e2].refs -= 1;
+    edges[f.e3].refs -= 1;
+  }
+  vec3 fNorm(int f) {
+    return fNorm(faces[f]);
+  }
+  vec3 fNorm(hull_face &f) {
+//    cerr << "Norm: " << f.e1 << " " << f.e2 << " " << f.e3 << endl;
+//    cerr << "E" << pts[edges[f.e1].a].val << pts[edges[f.e1].b].val << endl;
+//    cerr << "E" << pts[edges[f.e2].a].val << pts[edges[f.e2].b].val << endl;
+//    cerr << "E" << pts[edges[f.e3].a].val << pts[edges[f.e3].b].val << endl;
+
+
+    hull_edge &ab = edges[f.e1];
+    hull_edge &ac = edges[f.e2];
+    vec3 norm = (pts[ab.b].val - pts[ab.a].val) * (pts[ac.b].val - pts[ac.a].val);
+    if (pts[ab.a].val.dot(norm) < 0) {
+      norm *= -1;
+    }
+    norm.norm();
+//    cerr << norm << endl;
+    return norm;
+  }
+  pair<double,int> closestFace() {
+    double min = numeric_limits<double>::infinity();
+    int face = -1;
+    int i = 0;
+    for (flist::iterator it = faces.begin(); it != faces.end(); it++, i++) {
+      if (it->removed) continue;
+      double dist = fNorm(*it).dot(pts[edges[it->e1].a].val);
+
+      if (dist < min) {
+        min = dist;
+        face = i;
+      }
+    }
+    cerr << "Closest ";
+    pFace(face);
+    return pair<double,int>(min,face);
+  }
+
+  void pFace(int f) {
+    pFace(faces[f]);
+  }
+  void pFace(hull_face &f) {
+    cerr << "Face: N:" << fNorm(f) << endl;
+    pEdge(f.e1);
+    pEdge(f.e2);
+    pEdge(f.e3);
+  }
+  void pEdge(int e) {
+    pEdge(edges[e]);
+  }
+  void pEdge(hull_edge &e) {
+    cerr << " Edge:" << pts[e.a].val << " " << pts[e.b].val << " Refs:" << e.refs << endl;
+  }
+
+  epa_tri getTri(int fid) {
+    hull_face &f = faces[fid];
+    hull_edge &e1 = edges[f.e1],
+              &e2 = edges[f.e2],
+              &e3 = edges[f.e3];
+
+    set<int> s;
+    s.insert(e1.a);
+    s.insert(e1.b);
+    s.insert(e2.a);
+    s.insert(e2.b);
+    s.insert(e3.a);
+    s.insert(e3.b);
+    assert(s.size() == 3);
+    set<int>::iterator it = s.begin();
+    spt *a = &pts[*it++],
+        *b = &pts[*it++],
+        *c = &pts[*it++];
+
+    // Fix winding so normal points away from origin
+    if (((b->val - a->val)*(c->val - a->val)).dot(b->val) < 0) {
+      swap(b,c);
+    }
+
+    return epa_tri(*a,*b,*c);
+  }
+};
+
 
 epa_tri epa(const collidable &one, const collidable &two, vector<simplex_pt> &pts) {
 
@@ -663,46 +880,32 @@ epa_tri epa(const collidable &one, const collidable &two, vector<simplex_pt> &pt
              &c = pts[1],
              &d = pts[0];
 
-  cout << "a:" << a.a << b.a << c.a << d.a << endl;
-  cout << "b:" << a.b << b.b << c.b << d.b << endl;
-  cout << "val" << a.val << b.val << c.val << d.val << endl;
+  cerr << "a:" << a.a << b.a << c.a << d.a << endl;
+  cerr << "b:" << a.b << b.b << c.b << d.b << endl;
+  cerr << "val" << a.val << b.val << c.val << d.val << endl;
 
-  std::list<epa_tri> tris;
-  tris.push_back(epa_tri(a,b,c)); // abc
-  tris.push_back(epa_tri(a,c,d)); // acd
-  tris.push_back(epa_tri(a,d,b)); // adb
-  tris.push_back(epa_tri(d,c,b)); // dcb
+  chull h(a, b, c, d);
 
-  list<epa_tri>::iterator t;
+  int fid;
   while (true) {
+    pair<double,int> face = h.closestFace();
+    fid = face.second;
+    vec3 norm = h.fNorm(fid);
 
-    t = epa_min_dist(tris);
+    simplex_pt p = collision_vec(norm, one, two);
+    double d = p.val.dot(norm);
 
-    cout << "1. " << t->a.a << t->b.a << t->c.a << t->norm << endl;
-    cout << "2. " << t->a.b << t->b.b << t->c.b << t->norm << endl;
-    simplex_pt p = collision_vec(t->norm, one, two);
-    double d = p.val.dot(t->norm);
-//    cout << distance<list<epa_tri>::iterator>(tris.begin(), tris.end()) << " - " << d << " dd " << (d*d) << " sq " << t->distSq << " dif " << (d*d - t->distSq) << endl;
-    if (d*d - t->distSq < 0.001) {
+    cerr << "P" << p.val << norm << " d:" << d << " f:" << face.first << endl;
+
+    if (d - face.first < 0.001) {
       break;
     }
     else {
-      simplex_pt v1 = t->a,
-           v2 = t->b,
-           v3 = t->c;
-      cout << "Removing " << t->a.val << t->b.val << t->c.val << t->norm << " " << t->distSq << endl;
-      tris.erase(t);
-
-      cout << "Adding " << p.val << v1.val << v2.val << endl;
-      cout << "Adding " << p.val << v2.val << v3.val << endl;
-      cout << "Adding " << p.val << v3.val << v1.val << endl;
-      tris.push_back(epa_tri(p, v1, v2));
-      tris.push_back(epa_tri(p, v2, v3));
-      tris.push_back(epa_tri(p, v3, v1));
+      h.add_pt(p);
     }
   }
 
-  return *t;
+  return h.getTri(fid);
 }
 
 typedef pair<vec3,vec3> edge;
@@ -716,43 +919,32 @@ vec3 find_intersection(edge &one, edge &two) {
   return one.first + v1 * l;
 }
 
-list<edge> calculate_overlap(list<edge> a_edges, list<edge> b_edges, const vec3 &n) {
+void calculate_overlap(list<edge> &a_edges, list<edge> &b_edges, const vec3 &n) {
 
   for (list<edge>::iterator it = a_edges.begin(); it != a_edges.end(); it++) {
     vec3 left = it->first,
           right = it->second,
           norm = (right-left)*n;
 
-//      cout << "OUTER: " << left << right << norm << endl;
-
-    int count = 0;
+    bool rem = false;
     for (list<edge>::iterator it2 = b_edges.begin(); it2 != b_edges.end(); it2++) {
       vec3 left2 = it2->first,
             right2 = it2->second,
             b_norm = (right2 - left2) * n;
 
-      count += 1;
-//        cout << "INNER: " << left2 << right2 << b_norm << endl;
-      
       bool l = norm.dot(left - left2) > 0;
       bool r = norm.dot(left - right2) > 0;
       if (!l && !r) {
-
-//          cout << "Drop" << it2->first << it2->second << endl;
         it2 = --b_edges.erase(it2);
-
+        rem = true;
         continue;
       }
-      count -= 1;
 
       bool overlap = (l ^ r);
       l = (left2 - left).dot(b_norm) > 0;
       r = (left2 - right).dot(b_norm) > 0;
 
       if (overlap && l^r) {
-//          cout << "POP" << endl;
-
-//          cout << "Int: " << left << right << '-' << left2 << right2 << endl;
 
         vec3 in = find_intersection(*it, *it2);
       
@@ -772,82 +964,78 @@ list<edge> calculate_overlap(list<edge> a_edges, list<edge> b_edges, const vec3 
       }
     }
 
-    if (count == 0) {
-//        cout << "Remove " << it->first << it->second << endl;
+    if (rem) {
       it = --a_edges.erase(it);
     }
   }
-
-  list<edge> edges = a_edges;
-  edges.insert(edges.end(), b_edges.begin(),b_edges.end());
-
-  for (list<edge>::iterator it = a_edges.begin(); it != a_edges.end(); it++) {
-    cout << "A: " << it->first << " " << it->second << endl;
-  }
-  for (list<edge>::iterator it = b_edges.begin(); it != b_edges.end(); it++) {
-    cout << "B: " << it->first << " " << it->second << endl;
-  }
-
-  return edges;
 }
 
 
 
-bool contact_points(const collidable &a, const collidable &b, list<vec3> &a_pts, list<vec3> &b_pts, vec3 &sep) {
+bool contact_points(collidable &a, collidable &b, list<vec3> &a_pts, list<vec3> &b_pts, vec3 &sep) {
   
 
   vector<simplex_pt> sim;
   vec3 sep_axis;
   if (!collide(a,b,sim, sep_axis)) return false;
+  sep = sep_axis;
 
   epa_tri t = epa(a, b, sim);
   vec3 n = t.norm;
-  sep = n;
+
   vec3 perp = n*vec3(1.12345, 0.6543, 0.987564);
   perp *= 0.1 / perp.len();
-  list<vec3> cpts = collision_points(a, n, perp, t.a.a, 10);
+
+  sep = n;
+
+  list<vec3> cpts = collision_points(a, n, perp, t.a.a, 20);
   vec3 inv = n*-1;
   list<vec3> cpts2 = collision_points(b, inv, perp, t.a.b, 10);
 
-  cout << distance(cpts.begin(), cpts.end()) << " -- " << distance(cpts2.begin(), cpts2.end()) << endl;
-
+  cerr << distance(cpts.begin(), cpts.end()) << " -- " << distance(cpts2.begin(), cpts2.end()) << endl;
 
   list<edge> a_edges;
-  a_edges.push_back(edge(t.a.a + cpts.back(), t.a.a + cpts.front()));
   for (list<vec3>::iterator it = cpts.begin(); it != cpts.end(); it++) {
-//    cout << "CA" << *it << endl;
     list<vec3>::iterator tmp = it;
     tmp++;
-    if (tmp != cpts.end()) {
-      a_edges.push_back(edge(t.a.a + *it, t.a.a + *tmp));
-    }
+    if (tmp == cpts.end()) tmp = cpts.begin();
+    a_edges.push_back(edge(t.a.a + *it, t.a.a + *tmp));
   }
-  
-
 
   list<edge> b_edges;
-  b_edges.push_back(edge(t.a.b + cpts2.back(), t.a.b + cpts2.front()));
   for (list<vec3>::iterator it = cpts2.begin(); it != cpts2.end(); it++) {
-//    cout << "CB" << *it << endl;
     list<vec3>::iterator tmp = it;
     tmp++;
-    if (tmp != cpts2.end()) {
-      b_edges.push_back(edge(t.a.b + *it, t.a.b + *tmp));
-    }
+    if (tmp == cpts2.end()) tmp = cpts2.begin();
+    b_edges.push_back(edge(t.a.b + *it, t.a.b + *tmp));
   }
+
 
   // Swap B coords to find winding direction to be same as 'A'.
   for (list<edge>::iterator it = b_edges.begin(); it != b_edges.end(); it++) {
     swap(it->first, it->second);
   }
+  cout << "DONE" << endl;
 
+//  calculate_overlap(a_edges, b_edges, n);
 
-  list<edge> over = calculate_overlap(a_edges, b_edges, n);
-
-  for (list<edge>::iterator it = over.begin(); it != over.end(); it++) {
+  cout << "DONE1" << endl;
+  for (list<edge>::iterator it = a_edges.begin(); it != a_edges.end(); it++) {
     a_pts.push_back(it->first);
-    b_pts.push_back(it->first);
-  }
+    a_pts.push_back(it->second);
 
+    a.sim_edges.push_back(*it);
+  }
+  cout << "DONE2" << endl;
+  
+  for (list<edge>::iterator it = b_edges.begin(); it != b_edges.end(); it++) {
+    b_pts.push_back(it->first);
+    b_pts.push_back(it->second);
+
+    b.sim_edges.push_back(*it);
+  }
+  cout << "DONE3" << endl;
   return true;
 }
+
+

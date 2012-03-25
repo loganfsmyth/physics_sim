@@ -1085,9 +1085,13 @@ bool contact_points(collidable &a, collidable &b, list<vec3> &a_pts, list<vec3> 
 
   list<edge> edges = calculate_overlap(a_edges, b_edges, n);
 
+
+  a.sim_pts.clear();
   for (list<edge>::iterator it = edges.begin(); it != edges.end(); it++) {
     a_pts.push_back(it->first);
     b_pts.push_back(it->first);
+
+    a.sim_pts.push_back(it->first);
   }
   return true;
 }

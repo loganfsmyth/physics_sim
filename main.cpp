@@ -8,7 +8,8 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 
-#include "collision.h"
+
+#include "gameobj.h"
 
 using namespace std;
 
@@ -35,201 +36,10 @@ class Game {
   void resize(int h, int w);
 };
 
-class gameobj: public collidable {
-  public:
-  vector<vec3> pts;
-  vector<int> index;
-  vector<vec3> normals;
-  int vert_per_poly;
-  vec3 pos;
-
-  public:
-  gameobj(vec3 c): pos(c) { }
-  virtual void calcNext(unsigned long step);
-  virtual void commit();
-  virtual void triggerCollision(vec3 normal);
-  virtual vec3 collision_point(vec3 dir) const;
-  virtual void render() const = 0;
-
-  void rotate(double om, char axis = 'y');
-};
-
 vec3 calcCollisionVector(const gameobj &a, const gameobj &b) {
   
   return vec3();
 }
-
-void gameobj::rotate(double om, char axis) {
-  const double a = om * 3.14159265358979 / 180;
-  for (vector<vec3>::iterator it = pts.begin(); it != pts.end(); it++) {
-    double x = it->x, y = it->y, z = it->z;
-    switch (axis) {
-      case 'x':
-        it->y = y*cos(a) - z*sin(a);
-        it->z = y*sin(a) + z*cos(a);
-        break;
-      case 'y':
-        it->x = x*cos(a) - z*sin(a);
-        it->z = x*sin(a) + z*cos(a);
-        break;
-      case 'z':
-        it->x = x*cos(a) - y*sin(a);
-        it->y = x*sin(a) + y*cos(a);
-        break;
-      default:
-        break;
-    }
-  }
-}
-void gameobj::calcNext(unsigned long step) { }
-void gameobj::commit() { }
-void gameobj::triggerCollision(vec3 norm) { }
-vec3 gameobj::collision_point(vec3 dir) const {
-  double angle = 0;
-  vec3 max;
-
-  vector<vec3>::const_iterator it;
-
-  vec3 centroid;
-  for (it = pts.begin(); it != pts.end(); it++) {
-    centroid += *it;
-  }
-  centroid *= 1/pts.size();
-
-  for (it = pts.begin(); it != pts.end(); it++) {
-    vec3 pt = *it-centroid;
-    double a = pt.dot(dir)/(pt.len()*dir.len());
-    if (a > angle) {
-      angle = a;
-      max = *it;
-    }
-  }
-  return max + pos;
-}
-
-
-class box : public gameobj {
-
-  void init(vec3 c, double w, double h, double l) {
-    vert_per_poly = 4;
-    pts.reserve(8);
-    pts.push_back(vec3(-w/2, -h/2, -l/2));
-    pts.push_back(vec3( w/2, -h/2, -l/2));
-    pts.push_back(vec3(-w/2,  h/2, -l/2));
-    pts.push_back(vec3( w/2,  h/2, -l/2));
-    pts.push_back(vec3(-w/2, -h/2, l/2));
-    pts.push_back(vec3( w/2, -h/2, l/2));
-    pts.push_back(vec3(-w/2,  h/2, l/2));
-    pts.push_back(vec3( w/2,  h/2, l/2));
-
-    index.reserve(6*4);
-    index.push_back(0); index.push_back(2); index.push_back(3); index.push_back(1); // back face
-    index.push_back(0); index.push_back(4); index.push_back(6); index.push_back(2); // left side
-    index.push_back(4); index.push_back(5); index.push_back(7); index.push_back(6); // front face
-    index.push_back(1); index.push_back(3); index.push_back(7); index.push_back(5); // right face
-    index.push_back(2); index.push_back(6); index.push_back(7); index.push_back(3); // top face
-    index.push_back(0); index.push_back(1); index.push_back(5); index.push_back(4); // bottom face
-/**/
-  }
-
-  public:
-  box(vec3 c, double w, double h, double l): gameobj(c) {
-    init(c, w, h, l);
-  }
-  box(vec3 c, double w) : gameobj(c) {
-    init(c, w, w, w);
-  }
-
-  virtual void render() const {
-    int i = 0;
-    double c = 0.2;
-    glTranslated(pos.x, pos.y, pos.z);
-    glBegin(GL_QUADS);
-    for (vector<int>::const_iterator it = index.begin(); it != index.end();) {
-      glColor3d(c, c+0.1, c+0.2);
-      glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
-      glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
-      glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
-      glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
-      c += 0.1;
-    }
-    glEnd();
-
-    glTranslated(-1*pos.x, -1*pos.y, -1*pos.z);
-    
-    
-    glPointSize(10);
-    glBegin(GL_POINTS);
-    glColor3d(1.0, 0, 0);
-    for (vector<vec3>::const_iterator it = sim_pts.begin(); it != sim_pts.end(); it++) {
-      const vec3 &v = *it;
-      glVertex3d(it->x, it->y, it->z);
-    }
-    glEnd();
-    
-    glBegin(GL_LINES);
-    glColor3d(0, 1.0, 0);
-    for (vector<pair<vec3,vec3> >::const_iterator it = sim_edges.begin(); it != sim_edges.end(); it++) {
-      const pair<vec3,vec3> &v = *it;
-      const vec3 f = v.first + vec3(0.05, 0, 0);
-      const vec3 s = v.second + vec3(0.05, 0, 0);
-      glVertex3d(f.x, f.y, f.z);
-      glVertex3d(s.x, s.y, s.z);
-    }
-    glEnd();
-  }
-};
-
-class tetrahedron: public gameobj {
-  void init(double w) {
-    vert_per_poly = 3;
-    pts.reserve(4);
-    pts.push_back(vec3(   0, w/2, 0));
-    pts.push_back(vec3(   0,-w/2,-w/2));
-    pts.push_back(vec3(-w/2,-w/2, w/2));
-    pts.push_back(vec3( w/2,-w/2, w/2));
-
-    index.reserve(4*3);
-    index.push_back(0); index.push_back(2); index.push_back(3);
-    index.push_back(0); index.push_back(3); index.push_back(1);
-    index.push_back(0); index.push_back(1); index.push_back(2);
-    index.push_back(3); index.push_back(2); index.push_back(1);
-  }
-
-  public:
-  tetrahedron(vec3 c, double w): gameobj(c) {
-    init(w);
-  }
-  virtual void render() const {
-    int i = 0;
-    glTranslated(pos.x, pos.y, pos.z);
-    double c = 0.5;
-    glBegin(GL_TRIANGLES);
-    for (vector<int>::const_iterator it = index.begin(); it != index.end();) {
-      glColor3d(c, c+0.1, c);
-      glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
-      glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
-      glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
-      c += 0.1;
-    }
-    glEnd();
-
-    glTranslated(-1*pos.x, -1*pos.y, -1*pos.z);
-    
-    glPointSize(10);
-    glBegin(GL_POINTS);
-    glColor3d(1.0, 0, 0);
-    for (vector<vec3>::const_iterator it = sim_pts.begin(); it != sim_pts.end(); it++) {
-      const vec3 &v = *it;
-      glVertex3d(it->x, it->y, it->z);
-    }
-    glEnd();
-
-  }
-
-
-};
-
 
 
 
@@ -320,7 +130,7 @@ Game::Game() : updown(0), leftright(-180), position(0,0, 6) {
 
   b->rotate(180, 'y');
   for (vector<vec3>::iterator it = b->pts.begin(); it != b->pts.end(); it++) {
-    vec3 v = *it + b->pos;
+    vec3 v = *it + b->st.pos;
     cout << v;
   }
   cout << endl;
@@ -356,7 +166,7 @@ Game::Game() : updown(0), leftright(-180), position(0,0, 6) {
   vec3 pa, pb, da, db;
   //sep = collision_point(*a, *b, pa, pb, da, db);
 
-  ud(a, b, sep);
+//  ud(a, b, sep);
 
   cout << a->sim_pts.size() << " = " << b->sim_pts.size() << endl;
 
@@ -388,79 +198,38 @@ void Game::resize(int w, int h) {
 
 void Game::simulate(unsigned long step) {
 
-  vec3 move;
-  const double rad = leftright*3.14159265/180;
-  if (movement[0]) move.z += 1; // up
-  if (movement[1]) move.z -= 1; // down
-  if (movement[2]) move.x += 1; // left
-  if (movement[3]) move.x -= 1; // right
-  move.norm();
+  { // Handle camera movement
+    vec3 move;
+    const double rad = leftright*3.14159265/180;
+    if (movement[0]) move.z += 1; // up
+    if (movement[1]) move.z -= 1; // down
+    if (movement[2]) move.x += 1; // left
+    if (movement[3]) move.x -= 1; // right
+    move.norm();
 
-  double tmp = move.x*cos(rad) - move.z*sin(rad);
-  move.z = move.x*sin(rad) + move.z*cos(rad);
-  move.x = tmp;
+    double tmp = move.x*cos(rad) - move.z*sin(rad);
+    move.z = move.x*sin(rad) + move.z*cos(rad);
+    move.x = tmp;
 
-  move *= 4.0 * step / 1000000;
-  position += move;
+    move *= 4.0 * step / 1000000;
+    position += move;
+  }
 
-  return;
-  while (step) {
-    for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
-      (*it)->calcNext(step);
-    }
-    list<pair<gameobj*,gameobj*> > had_collision;
-    for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
-      for (list<gameobj*>::iterator it2 = objs.begin(); it2 != objs.end(); it++) {
-        if (collide(**it, **it2)) {
-          had_collision.push_back(pair<gameobj*,gameobj*>(*it, *it2));
-        }
+
+  for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
+    (*it)->calcNext(step);
+  }
+  for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
+    for (list<gameobj*>::iterator it2 = it; it2 != objs.end(); it2++) {
+      if (*it == *it2) continue;
+      gameobj &a = **it;
+      gameobj &b = **it2;
+      list<vec3> a_pts, b_pts;
+      if (contact_points(a, b, a_pts, b_pts, sep)) {
+        triggerCollision(a, b, a_pts, sep);
       }
     }
-    if (had_collision.size()) {
-      int min = 0, max = step, mid;
-      list<pair<gameobj*,gameobj*> >::iterator hit_it;
-      list<gameobj*>::iterator it;
-      while ( min <= max) {
-        mid = (max+min)/2;
-        for (it = objs.begin(); it != objs.end(); it++) {
-          (*it)->calcNext(mid);
-        }
-        list<pair<gameobj*,gameobj*> > new_had_collision;
-        bool hit = false;
-        for (hit_it = had_collision.begin(); hit_it != had_collision.end(); hit_it++) {
-          if (collide(*(hit_it->first), *(hit_it->second))) {
-            hit = true;
-            new_had_collision.push_back(*hit_it);
-          }
-        }
-        if (hit) {
-          max = mid - 1;
-          had_collision = new_had_collision;
-        }
-        else {
-          min = mid + 1;
-        }
-      }
-      if (max > 0) {
-        for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
-          (*it)->calcNext(max);
-          (*it)->commit();
-        }
-        for (hit_it = had_collision.begin(); hit_it != had_collision.end(); hit_it++) {
-          gameobj *f = hit_it->first, *s = hit_it->second;
-          vec3 v = calcCollisionVector(*f, *s);
-          f->triggerCollision(v);
-          s->triggerCollision(v * -1);
-        }
-        step -= max;
-      }
-      else {
-        step -= step;
-      }
-    }
-    else {
-      step -= step;
-    }
+    (*it)->commit();
   }
 }
 
@@ -523,6 +292,8 @@ void Game::check_events() {
           case SDLK_RIGHT:
             movement[3] = true;
             break;
+
+/*
           case SDLK_e:
             (*(++objs.begin()))->pos += vec3(0, step, 0);
             break;
@@ -553,6 +324,7 @@ void Game::check_events() {
           case SDLK_4:
             (*(++objs.begin()))->rotate(-15, 'y');
             break;
+*/
           default:
             break;
         }
@@ -577,7 +349,7 @@ void Game::check_events() {
             collidable *b = *++objs.begin();
             vec3 pa, pb, da, db;
 
-            ud(a, b, sep);
+//            ud(a, b, sep);
             break;
           }
         }

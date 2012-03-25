@@ -592,7 +592,7 @@ void rotateVec(vec3 &v, double angle, const vec3 &ax) {
 
 
 list<vec3> collision_points(const collidable &a, const vec3 &n, vec3 perp, const vec3 &pt, int samples) {
-  cout << "Testing Normal " << n << " with " << samples << " samples" << endl;
+//  cout << "Testing Normal " << n << " with " << samples << " samples" << endl;
   double angle = 2*3.1415926535 / samples;
   list<vec3> pts;
   for (int i = 0; i < samples; i++) {

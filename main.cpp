@@ -20,7 +20,7 @@ class Game {
   bool close;
   double leftright;
   double updown;
-  vec3 position;
+  gameobj* camera;
   list<gameobj*> objs;
   bool movement[4];
   vec3 sep;
@@ -94,7 +94,7 @@ void Game::run() {
   cout << endl;
 }
 
-Game::Game() : updown(0), leftright(-180), position(0,0, 6) {
+Game::Game() : updown(0), leftright(-180) {
   close = false;
 
   int w = 800,
@@ -118,6 +118,11 @@ Game::Game() : updown(0), leftright(-180), position(0,0, 6) {
   glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
   glClearColor(0,0,0,0);
+
+  camera = new box(vec3(0,0,6), 0.25);
+  objs.push_back(camera);
+//  camera->physics = false;
+
 /*
   gameobj *a = new tetrahedron(vec3(), 2),
           //*b = new tetrahedron(vec3(1, 2.01, -1), 2);
@@ -212,7 +217,8 @@ void Game::simulate(unsigned long step) {
     move.x = tmp;
 
     move *= 4.0 * step / 1000000;
-    position += move;
+    camera->st.pos += move;
+    camera->st.mo = vec3();
   }
 
 
@@ -241,7 +247,7 @@ void Game::render(int interp_percent) {
   glRotated(-1*updown, 1, 0, 0);
   glRotated(leftright, 0, 1, 0);
 
-  glTranslated(position.x, position.y, position.z);
+  glTranslated(camera->st.pos.x, camera->st.pos.y, camera->st.pos.z);
   glColor3f(1.0f, 1.0f, 0.7f);
 
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);

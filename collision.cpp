@@ -12,7 +12,7 @@ using std::cerr;
 using std::endl;
 using namespace std;
 
-#define COLLISION_DEBUG 1
+//#define COLLISION_DEBUG 1
 
 #ifndef COLLISION_DEBUG
 #define COLLISION_DEBUG 0
@@ -617,14 +617,14 @@ list<vec3> collision_points(const collidable &a, const vec3 &n, vec3 perp, const
 
 void closest_simplex(const collidable &a, const collidable &b, std::vector<simplex_pt> &pts) {
   simplex_pt n = collision_vec(vec3(1, 0, 0), a, b);
-  cerr << "val: " << n.val << " a:" << n.a << " b:" << n.b << endl;
+//  cerr << "val: " << n.val << " a:" << n.a << " b:" << n.b << endl;
   pts.reserve(3);
   pts.push_back(n);
   vec3 dir = n.val * -1;
   while (true) {
     dir.norm();
     n = collision_vec(dir, a, b);
-    cerr << "val: " << n.val << " a:" << n.a << " b:" << n.b << endl;
+//    cerr << "val: " << n.val << " a:" << n.a << " b:" << n.b << endl;
     if (n.val.dot(dir) - pts.back().val.dot(dir) < 0.1) {
       break;
     }
@@ -646,27 +646,6 @@ epa_tri::epa_tri(simplex_pt &a, simplex_pt &b, simplex_pt &c) : a(a), b(b), c(c)
   bc = c.val-b.val;
   norm = ab*ac;
   norm.norm();
-}
-
-list<epa_tri>::iterator epa_min_dist(std::list<epa_tri> &tris) {
-  double min = numeric_limits<double>::infinity();
-  list<epa_tri>::iterator closest;
-
-  for (list<epa_tri>::iterator it = tris.begin(); it != tris.end(); it++) {
-    if (it->dist == -1) {
-      it->dist = it->a.val.dot(it->norm);
-      if (it->dist < 0) {
-        cerr << "LT!!!!" << endl;
-      }
-    }
-    if (it->dist < min) {
-      closest = it;
-      min = it->dist;
-      cerr << "MIN" << endl;
-    }
-    cerr << ">v " << it->a.val << it->b.val << it->c.val << it->norm << " dist" << it->dist << endl;
-  }
-  return closest;
 }
 
 struct hull_edge {
@@ -703,7 +682,7 @@ class chull {
     add_pt(d);
   }
   void add_pt(const spt &p) {
-    cerr << "Adding point " << p.val << endl;
+//    cerr << "Adding point " << p.val << endl;
 
     for (plist::iterator it = pts.begin(); it != pts.end(); it++) {
       if (it->val == p.val) return;
@@ -749,7 +728,7 @@ class chull {
     // Check edges of removed faces for ones still references. They are the ones along edges.
     for (list<int>::iterator it = possible_edges.begin(); it != possible_edges.end(); it++) {
       hull_edge &e = edges[*it];
-      cerr << "C";
+//      cerr << "C";
       pEdge(e);
       if (e.refs > 0) {
         int e1 = getEdge(e.a, pos);
@@ -764,7 +743,7 @@ class chull {
     edges[e2].refs += 1;
     edges[e3].refs += 1;
 
-    cerr << "Add Face ";
+//    cerr << "Add Face ";
     pFace(faces.size()-1);
   }
   int addEdge(int a, int b) {
@@ -782,7 +761,7 @@ class chull {
     return edges.size()-1;
   }
   void fRemove(hull_face &f) {
-    cerr << "Remove face ";
+//    cerr << "Remove face ";
     pFace(f);
 
     f.removed = true;
@@ -823,7 +802,7 @@ class chull {
         face = i;
       }
     }
-    cerr << "Closest ";
+//    cerr << "Closest ";
     pFace(face);
     return pair<double,int>(min,face);
   }
@@ -832,7 +811,7 @@ class chull {
     pFace(faces[f]);
   }
   void pFace(hull_face &f) {
-    cerr << "Face: N:" << fNorm(f) << endl;
+//    cerr << "Face: N:" << fNorm(f) << endl;
     pEdge(f.e1);
     pEdge(f.e2);
     pEdge(f.e3);
@@ -841,7 +820,7 @@ class chull {
     pEdge(edges[e]);
   }
   void pEdge(hull_edge &e) {
-    cerr << " Edge:" << pts[e.a].val << " " << pts[e.b].val << " Refs:" << e.refs << endl;
+//    cerr << " Edge:" << pts[e.a].val << " " << pts[e.b].val << " Refs:" << e.refs << endl;
   }
 
   epa_tri getTri(int fid) {
@@ -879,10 +858,11 @@ epa_tri epa(const collidable &one, const collidable &two, vector<simplex_pt> &pt
              &b = pts[2],
              &c = pts[1],
              &d = pts[0];
-
+/*
   cerr << "a:" << a.a << b.a << c.a << d.a << endl;
   cerr << "b:" << a.b << b.b << c.b << d.b << endl;
   cerr << "val" << a.val << b.val << c.val << d.val << endl;
+*/
 
   chull h(a, b, c, d);
 
@@ -895,7 +875,7 @@ epa_tri epa(const collidable &one, const collidable &two, vector<simplex_pt> &pt
     simplex_pt p = collision_vec(norm, one, two);
     double d = p.val.dot(norm);
 
-    cerr << "P" << p.val << norm << " d:" << d << " f:" << face.first << endl;
+//    cerr << "P" << p.val << norm << " d:" << d << " f:" << face.first << endl;
 
     if (d - face.first < 0.001) {
       break;
@@ -919,60 +899,150 @@ vec3 find_intersection(edge &one, edge &two) {
   return one.first + v1 * l;
 }
 
-void calculate_overlap(list<edge> &a_edges, list<edge> &b_edges, const vec3 &n) {
+list<edge> calculate_overlap(list<edge> small, list<edge> large, const vec3 &n) {
 
-  for (list<edge>::iterator it = a_edges.begin(); it != a_edges.end(); it++) {
-    vec3 left = it->first,
-          right = it->second,
-          norm = (right-left)*n;
+  int small_len = distance(small.begin(),small.end());
+  int large_len = distance(large.begin(),large.end());
 
-    bool rem = false;
-    for (list<edge>::iterator it2 = b_edges.begin(); it2 != b_edges.end(); it2++) {
-      vec3 left2 = it2->first,
-            right2 = it2->second,
-            b_norm = (right2 - left2) * n;
+  if (small_len > large_len) {
+    swap(small,large);
+    swap(small_len,large_len);
+  }
 
-      bool l = norm.dot(left - left2) > 0;
-      bool r = norm.dot(left - right2) > 0;
-      if (!l && !r) {
-        it2 = --b_edges.erase(it2);
-        rem = true;
-        continue;
-      }
+  if (large_len >= 3) {
+    if (small_len >= 3) { // plane-plane
+      for (list<edge>::iterator it = large.begin(); it != large.end(); it++) {
+        vec3 left = it->first,
+              right = it->second,
+              norm = (right-left)*n;
 
-      bool overlap = (l ^ r);
-      l = (left2 - left).dot(b_norm) > 0;
-      r = (left2 - right).dot(b_norm) > 0;
+        int count = 0;
+        bool rem = false;
+        for (list<edge>::iterator it2 = small.begin(); it2 != small.end(); it2++) {
+          vec3 left2 = it2->first,
+                right2 = it2->second,
+                b_norm = (right2 - left2) * n;
 
-      if (overlap && l^r) {
+          bool l = norm.dot(left - left2) > 0;
+          bool r = norm.dot(left - right2) > 0;
+          if (!l && !r) {
+            it2 = --small.erase(it2);
+            rem = true;
+            continue;
+          }
 
-        vec3 in = find_intersection(*it, *it2);
-      
-        if ((left - in).dot(b_norm) > 0) {
-          it->first = in;
+          bool overlap = (l ^ r);
+          l = (left2 - left).dot(b_norm) > 0;
+          r = (left2 - right).dot(b_norm) > 0;
+
+          if (overlap && l^r) {
+
+            vec3 in = find_intersection(*it, *it2);
+
+            if ((left - in).dot(b_norm) > 0) {
+              it->first = in;
+            }
+            else {
+              it->second = in;
+            }
+            if ((left2 - in).dot(norm) > 0) {
+              it2->first = in;
+            }
+            else {
+              it2->second = in;
+            }
+
+          }
         }
-        else {
-          it->second = in;
-        }
-        
-        if ((left2 - in).dot(norm) > 0) {
-          it2->first = in;
-        }
-        else {
-          it2->second = in;
+        if (!rem) {
+          it = --large.erase(it);
         }
       }
     }
+    else if (small_len == 2) { // plane-edge
+      edge e(small.front());
+      vec3 &start = e.first,
+           &end = e.second,
+           norm = (start-end)*n;
 
-    if (rem) {
-      it = --a_edges.erase(it);
+      for (list<edge>::iterator it = large.begin(); it != large.end(); it++) {
+        vec3 &left = it->first,
+             &right = it->second,
+             inner_norm = (right-left)*n;
+        
+        bool l = norm.dot(start-left) > 0;
+        bool r = norm.dot(start-right) > 0;
+        
+        bool l2 = inner_norm.dot(start-left) > 0;
+        bool r2 = inner_norm.dot(end-left) > 0;
+        
+        if (l ^ r && l2 ^ r2) {
+          vec3 in = find_intersection(*it, e);
+
+          if ((start - in).dot(inner_norm) > 0) {
+            start = in;
+          }
+          else {
+            end = in;
+          }
+        }
+      }
+
+      list<edge> edges;
+      edges.push_back(edge(start,end));
+      edges.push_back(edge(end,start));
+      return edges;
+    }
+    else if (small_len == 1) { // plane-pt
+      return small;
+    }
+    else {
+      cerr << "Object has no contact points" << endl;
     }
   }
+  else if (large_len == 2) {
+    if (small_len == 2) { // line-line
+      edge e1(small.front());
+      edge e2(large.front());
+      list<edge> edges;
+      if (((e1.first-e1.second)*(e2.first-e2.second)).lenSq() < 0.01) {
+        cerr << "Line-line" << endl;
+      }
+      else {
+        vec3 in = find_intersection(e1, e2);
+        edges.push_back(edge(in,in));
+      }
+      return edges;
+    }
+    else if (small_len == 1) { // line-pt
+      return small;
+    }
+    else {
+      cout << "Object has no contact points" << endl;
+    }
+  }
+  else if (large_len == 1) {
+    if (small_len == 1) { // pt-pt
+      return small;
+
+    }
+    else {
+      cout << "Object has no contact points" << endl;
+    }
+  }
+  else {
+      cout << "Object has no contact points" << endl;
+
+  }
+
+  list<edge> edges(large);
+  edges.insert(edges.end(), small.begin(), small.end());
+  return edges;
 }
 
 
 
-bool contact_points(collidable &a, collidable &b, list<vec3> &a_pts, list<vec3> &b_pts, vec3 &sep) {
+bool contact_points(collidable &a, collidable &b, list<vec3> &a_pts, list<vec3> &b_pts, vec3 &sep, list<vec3> &contact) {
   
 
   vector<simplex_pt> sim;
@@ -992,8 +1062,6 @@ bool contact_points(collidable &a, collidable &b, list<vec3> &a_pts, list<vec3> 
   vec3 inv = n*-1;
   list<vec3> cpts2 = collision_points(b, inv, perp, t.a.b, 10);
 
-  cerr << distance(cpts.begin(), cpts.end()) << " -- " << distance(cpts2.begin(), cpts2.end()) << endl;
-
   list<edge> a_edges;
   for (list<vec3>::iterator it = cpts.begin(); it != cpts.end(); it++) {
     list<vec3>::iterator tmp = it;
@@ -1010,31 +1078,21 @@ bool contact_points(collidable &a, collidable &b, list<vec3> &a_pts, list<vec3> 
     b_edges.push_back(edge(t.a.b + *it, t.a.b + *tmp));
   }
 
-
   // Swap B coords to find winding direction to be same as 'A'.
   for (list<edge>::iterator it = b_edges.begin(); it != b_edges.end(); it++) {
     swap(it->first, it->second);
   }
-  cout << "DONE" << endl;
 
-//  calculate_overlap(a_edges, b_edges, n);
+  list<edge> edges = calculate_overlap(a_edges, b_edges, n);
 
-  cout << "DONE1" << endl;
-  for (list<edge>::iterator it = a_edges.begin(); it != a_edges.end(); it++) {
+  for (list<edge>::iterator it = edges.begin(); it != edges.end(); it++) {
     a_pts.push_back(it->first);
     a_pts.push_back(it->second);
 
     a.sim_edges.push_back(*it);
-  }
-  cout << "DONE2" << endl;
-  
-  for (list<edge>::iterator it = b_edges.begin(); it != b_edges.end(); it++) {
-    b_pts.push_back(it->first);
-    b_pts.push_back(it->second);
 
-    b.sim_edges.push_back(*it);
+    contact.push_back(it->first);
   }
-  cout << "DONE3" << endl;
   return true;
 }
 

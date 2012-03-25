@@ -9,6 +9,7 @@ class vec3 {
 
   public:
     vec3();
+    vec3(const vec3 &v);
     vec3(double x, double y, double z);
 
     double dot(const vec3& v2) const;

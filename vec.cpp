@@ -14,6 +14,12 @@ vec3::vec3() {
   z = 0.0;
 }
 
+vec3::vec3(const vec3 &v) {
+  x = v.x;
+  y = v.y;
+  z = v.z;
+}
+
 vec3::vec3(double x, double y, double z) {
   this->x = x;
   this->y = y;

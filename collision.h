@@ -35,7 +35,7 @@ bool collide(const collidable &a, const collidable &b);
 bool collide(const collidable &a, const collidable &b, std::vector<simplex_pt> &pts, vec3 &dir);
 
 epa_tri epa(const collidable &one, const collidable &two, std::vector<simplex_pt> &pts);
-bool contact_points(collidable &a, collidable &b, std::list<vec3> &a_pts, std::list<vec3> &b_pts, vec3 &sep, std::list<vec3> &contact);
+bool contact_points(collidable &a, collidable &b, std::list<vec3> &a_pts, std::list<vec3> &b_pts, vec3 &sep);
 
 
 // Exposed for unit testing, should not be used.

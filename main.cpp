@@ -239,21 +239,13 @@ void ud(collidable* a, collidable* b, vec3 &sep) {
   b->sim_pts.clear();
   b->sim_edges.clear();
 
-  cout << "============================================================================================" << endl;
-  cout << "============================================================================================" << endl;
-  cout << "============================================================================================" << endl;
-
   list<vec3> a_pts, b_pts, contact;
-  if (contact_points(*a, *b, a_pts, b_pts, sep, contact)) {
-    cout << "Points:" << endl;
+  if (contact_points(*a, *b, a_pts, b_pts, sep)) {
     for (list<vec3>::iterator it = a_pts.begin(); it != a_pts.end(); it++) {
       a->sim_pts.push_back(*it);
-      cout << *it << endl;
     }
-    
     for (list<vec3>::iterator it = b_pts.begin(); it != b_pts.end(); it++) {
       b->sim_pts.push_back(*it);
-      cout << *it << endl;
     }
   }
   else {

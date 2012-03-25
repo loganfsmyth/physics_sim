@@ -1042,7 +1042,7 @@ list<edge> calculate_overlap(list<edge> small, list<edge> large, const vec3 &n) 
 
 
 
-bool contact_points(collidable &a, collidable &b, list<vec3> &a_pts, list<vec3> &b_pts, vec3 &sep, list<vec3> &contact) {
+bool contact_points(collidable &a, collidable &b, list<vec3> &a_pts, list<vec3> &b_pts, vec3 &sep) {
   
 
   vector<simplex_pt> sim;
@@ -1087,11 +1087,7 @@ bool contact_points(collidable &a, collidable &b, list<vec3> &a_pts, list<vec3> 
 
   for (list<edge>::iterator it = edges.begin(); it != edges.end(); it++) {
     a_pts.push_back(it->first);
-    a_pts.push_back(it->second);
-
-    a.sim_edges.push_back(*it);
-
-    contact.push_back(it->first);
+    b_pts.push_back(it->first);
   }
   return true;
 }

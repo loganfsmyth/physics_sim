@@ -33,11 +33,14 @@ struct epa_tri {
   epa_tri(simplex_pt &a, simplex_pt &b, simplex_pt &c);
 };
 
-
+// GJK Implementation
 bool collide(const collidable &a, const collidable &b);
 bool collide(const collidable &a, const collidable &b, std::vector<simplex_pt> &pts, vec3 &dir);
 
+// EPA Implementation to find collision surface normal.
 epa_tri epa(const collidable &one, const collidable &two, std::vector<simplex_pt> &pts);
+
+// Find contact points between two objects.
 bool contact_points(collidable &a, collidable &b, std::list<vec3> &a_pts, std::list<vec3> &b_pts, vec3 &sep);
 
 

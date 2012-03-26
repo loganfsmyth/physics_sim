@@ -42,8 +42,8 @@ Game::Game() : updown(0), leftright(-180), width(800), height(600), close(false)
 
   objs.push_back(new box(vec3(10, 5, 7), 1.25));
   objs.push_back(new box(vec3(0, -4, -2), 2));
-//  objs.push_back(new box(vec3(2, 2,0), 1, 4, 1));
-//  objs.push_back(new tetrahedron(vec3(5,0,4), 2));
+  objs.push_back(new box(vec3(2, 2,0), 1, 4, 1));
+  objs.push_back(new tetrahedron(vec3(5,0,4), 2));
   // new tetrahedron(vec3(1, 2.01, -1), 2);
   // new tetrahedron(vec3(0, 2.01, -1), 2);
   // new tetrahedron(vec3(0, 1, 1.7), 2);

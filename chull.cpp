@@ -12,7 +12,9 @@ hull_edge::hull_edge(int a, int b) : a(a), b(b),refs(0) {
 hull_face::hull_face(int e1, int e2, int e3) : e1(e1), e2(e2), e3(e3), removed(false) {
 }
 
-
+/**
+ * Initialize hull with 4 simplex points
+ */
 chull::chull(const spt &a, const spt &b, const spt &c, const spt &d) {
   add_pt(a);
   add_pt(b);
@@ -21,6 +23,7 @@ chull::chull(const spt &a, const spt &b, const spt &c, const spt &d) {
 }
 void chull::add_pt(const spt &p) {
 
+  // Don't allow points to be added more than once.
   for (plist::iterator it = pts.begin(); it != pts.end(); it++) {
     if (it->val == p.val) return;
   }
@@ -51,10 +54,10 @@ void chull::add_pt(const spt &p) {
     return;
   }
 
+  // Remove all faces toward new point, and add edges as possible edges for new triangles
   list<int> possible_edges;
   for (flist::iterator it = faces.begin(); it != faces.end(); it++) {
     if (!it->removed && (p.val - pts[edges[it->e1].a].val).dot(fNorm(*it)) > 0) { // find faces pointing toward new pt
-      // Remove face toward new point, and add edges as possible edges for new triangles
       fRemove(*it);
       possible_edges.push_back(it->e1);
       possible_edges.push_back(it->e2);
@@ -73,16 +76,21 @@ void chull::add_pt(const spt &p) {
   }
 }
 
+// Create a new face and inc edge refs.
 void chull::addFace(int e1, int e2, int e3) {
   faces.push_back(hull_face(e1, e2, e3));
   edges[e1].refs += 1;
   edges[e2].refs += 1;
   edges[e3].refs += 1;
 }
+
+// Add a new edge
 int chull::addEdge(int a, int b) {
   edges.push_back(hull_edge(a,b));
   return edges.size()-1;
 }
+
+// Fetch edge or create if doesn't exist.
 int chull::getEdge(int a, int b) {
   int i = 0;
   for (elist::iterator it = edges.begin(); it != edges.end(); it++, i++) {
@@ -90,15 +98,18 @@ int chull::getEdge(int a, int b) {
       return i;
     }
   }
-  addEdge(a,b);
-  return edges.size()-1;
+  return addEdge(a,b);
 }
+
+// Remove a given face and dec edge refs.
 void chull::fRemove(hull_face &f) {
   f.removed = true;
   edges[f.e1].refs -= 1;
   edges[f.e2].refs -= 1;
   edges[f.e3].refs -= 1;
 }
+
+// Calculate the face normal.
 vec3 chull::fNorm(int f) {
   return fNorm(faces[f]);
 }
@@ -112,6 +123,8 @@ vec3 chull::fNorm(hull_face &f) {
   norm.norm();
   return norm;
 }
+
+// Find the closest face's distance and index.
 pair<double,int> chull::closestFace() {
   double min = numeric_limits<double>::infinity();
   int face = -1;
@@ -127,6 +140,8 @@ pair<double,int> chull::closestFace() {
   }
   return pair<double,int>(min,face);
 }
+
+// Create an epa_tri from face.
 epa_tri chull::getTri(int fid) {
   hull_face &f = faces[fid];
   hull_edge &e1 = edges[f.e1],

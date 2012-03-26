@@ -14,3 +14,14 @@ and then found the shared regions on the surfaces of each of the two objects col
 
 There is still work to be done on the physics side of things, but the collision detection
 has been working flawlessly in my testing.
+
+# TODO
+
+* Get physics working properly for non-rotational cases
+* Implement proper rotation collisions with inertia
+* Allow for picking up objects and moving them around
+* Make adding new items easy.
+* The code works fine for a limited number of items, but there are piles
+  and piles of optimizations that can be done to all parts of the algorithms
+* Clean up the C++ a bit. My C++ is a bit rusty, so I have been passing lots of
+  things around by value instead of reference, so that will also slow things down.

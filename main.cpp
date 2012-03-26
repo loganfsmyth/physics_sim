@@ -15,7 +15,6 @@ using namespace std;
 
 const int mouseoffset = 200;
 
-class gameobj;
 class Game {
   bool close;
   double leftright;
@@ -24,6 +23,7 @@ class Game {
   list<gameobj*> objs;
   bool movement[4];
   vec3 sep;
+  int width, height;
 
   public:
   Game();
@@ -34,6 +34,7 @@ class Game {
   void check_events();
 
   void resize(int h, int w);
+  void pick(int x, int y);
 };
 
 vec3 calcCollisionVector(const gameobj &a, const gameobj &b) {
@@ -97,8 +98,8 @@ void Game::run() {
 Game::Game() : updown(0), leftright(-180) {
   close = false;
 
-  int w = 800,
-      h = 600;
+  width = 800,
+  height = 600;
   for (int i = 0; i < 4; i++) {
     movement[i] = false;
   }
@@ -109,7 +110,7 @@ Game::Game() : updown(0), leftright(-180) {
   SDL_WM_GrabInput(SDL_GRAB_ON);
   SDL_ShowCursor(0);
 
-  resize(w, h);
+  resize(width, height);
 
   glShadeModel(GL_SMOOTH);
   glClearDepth(1.0f);
@@ -193,9 +194,84 @@ Game::~Game() {
   SDL_Quit();
 }
 
+void Game::pick(int x, int y) {
+  cout << x << " " << y << endl;
+
+  const int pickBufferSize = 32;
+  GLuint pickBuffer[pickBufferSize];
+  GLint view[4];
+
+  // Tell GL about the buffer and get view data
+  glSelectBuffer(pickBufferSize, pickBuffer);
+  glGetIntegerv(GL_VIEWPORT, view);
+
+  // Start pick mode
+  glRenderMode(GL_SELECT);
+  glInitNames();
+  glPushName(0);
+  
+  // Set up Matrices for 1px view at x,y coords
+  glMatrixMode(GL_PROJECTION);
+  glPushMatrix();
+  glLoadIdentity();
+  gluPickMatrix(x, y, 1.0, 1.0, view);
+  gluPerspective(45.0f, (float)view[2] / (float)view[3], 0.1, 2000.0f);
+  glMatrixMode(GL_MODELVIEW);
+
+  // Draw items
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glLoadIdentity();
+
+  glRotated(-1*updown, 1, 0, 0);
+  glRotated(leftright, 0, 1, 0);
+
+  glTranslated(camera->st.pos.x, camera->st.pos.y, camera->st.pos.z);
+  glColor3f(1.0f, 1.0f, 0.7f);
+
+  map<GLubyte,gameobj*> objects;
+  GLubyte i = 1;
+  for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++, i++) {
+    // Render each item with a name, and save name->obj mapping
+    (*it)->picked = false;
+    glLoadName(i);
+    objects.insert(pair<GLubyte,gameobj*>(i, *it));
+    (*it)->render(true);
+  }
+
+  // Revert projection matrix to normal
+  glMatrixMode(GL_PROJECTION);
+  glPopMatrix();
+
+
+  GLint hits = glRenderMode(GL_RENDER);
+
+  glMatrixMode(GL_MODELVIEW);
+
+  GLubyte min_z = 255;
+  GLubyte picked_name = 0;
+  for (int i = 0; i < hits; i += 4) {
+    GLubyte num = pickBuffer[i],
+            min = pickBuffer[i+1],
+            max = pickBuffer[i+2],
+            name = pickBuffer[i+3];
+
+    if (min < min_z) {
+      min_z = min;
+      picked_name = name;
+    }
+  }
+
+  if (picked_name != 0) {
+    objects[picked_name]->picked = true;
+  }
+}
+
 void Game::resize(int w, int h) {
 
   if (h == 0) h = 1;
+
+  width = w;
+  height = h;
 
   if (SDL_SetVideoMode(w, h, 32, SDL_HWSURFACE|SDL_GL_DOUBLEBUFFER|SDL_OPENGL|SDL_RESIZABLE) == NULL) {
     throw exception();
@@ -237,7 +313,7 @@ void Game::simulate(unsigned long step) {
   }
   for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
     for (list<gameobj*>::iterator it2 = it; it2 != objs.end(); it2++) {
-      if (*it == *it2) continue;
+      if (*it == *it2 || *it == camera) continue;
       gameobj &a = **it;
       gameobj &b = **it2;
       list<vec3> a_pts, b_pts;
@@ -260,11 +336,11 @@ void Game::render(int interp_percent) {
   glTranslated(camera->st.pos.x, camera->st.pos.y, camera->st.pos.z);
   glColor3f(1.0f, 1.0f, 0.7f);
 
-  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
     (*it)->render();
   }
-  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+//  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   vec3 v = sep * 1000;
   
   
@@ -386,6 +462,8 @@ void Game::check_events() {
         }
         break;
       case SDL_MOUSEBUTTONDOWN:
+        pick(width/2, height/2);
+        break;
       case SDL_MOUSEBUTTONUP:
         break;
       case SDL_QUIT:

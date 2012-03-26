@@ -1,4 +1,7 @@
 
+#ifndef INCLUDE_COLLISION_H
+#define INCLUDE_COLLISION_H
+
 #include <vector>
 #include <list>
 #include "vec.h"
@@ -42,3 +45,5 @@ bool contact_points(collidable &a, collidable &b, std::list<vec3> &a_pts, std::l
 bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir);
 std::list<vec3> collision_points(const collidable &a, const vec3 &n, vec3 perp, const vec3 &pt, int samples);
 
+
+#endif

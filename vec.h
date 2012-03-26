@@ -1,4 +1,7 @@
 
+#ifndef INCLUDE_VEC_H
+#define INCLUDE_VEC_H
+
 #include <ostream>
 
 class vec3 {
@@ -35,3 +38,4 @@ class vec3 {
 
 std::ostream& operator<<(std::ostream& s, const vec3& v);
 
+#endif

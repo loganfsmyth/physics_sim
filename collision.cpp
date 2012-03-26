@@ -1,38 +1,43 @@
 
 #include <list>
 #include <set>
-#include <limits>
+
 #include <iostream>
 #include "collision.h"
 #include <cmath>
 #include <cassert>
+
+#include "chull.h"
 
 using std::cerr;
 using std::cerr;
 using std::endl;
 using namespace std;
 
-//#define COLLISION_DEBUG 1
-
-#ifndef COLLISION_DEBUG
-#define COLLISION_DEBUG 0
-#endif
+typedef pair<vec3,vec3> edge;
 
 simplex_pt::simplex_pt(vec3 v, vec3 na, vec3 nb): val(v), a(na), b(nb) { }
 simplex_pt::simplex_pt() { }
+bool simplex_pt::operator==(const simplex_pt &p) {
+  return a == p.a && b == p.b;
+}
 
+/**
+ * Support function for GJK and EPA. Given direction and 2 objects, return simplex point.
+ */
 simplex_pt collision_vec(vec3 dir, const collidable &a, const collidable &b) {
   vec3 one = a.collision_point(dir);
   vec3 two = b.collision_point(dir*-1);
   vec3 s = one-two;
   
-#if COLLISION_DEBUG
-//  cerr << "one: " << one << " two: " << two << " dir: " << dir << " sum: " << s << endl;
-#endif
   simplex_pt val(s,one,two);
   return val;
 }
 
+/**
+ * Given a current simplex, update contents based on location of origin,
+ * and set 'dir' as vector pointing toward origin.
+ */
 bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
   switch (pts.size()) {
     case 0:
@@ -50,10 +55,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
       double dist = ab.dot(a0);
 
       vec3 v = (ab*a0);
-#if COLLISION_DEBUG
-      cerr << "ab:" << ab << " = " << "a0:" <<a0 << " = v:" << v << " =1" << endl;
-#endif
-
       if (dist == 0) { // avoid (0,0,0) cross product for point v point case
         dir *= -1;
       }
@@ -77,32 +78,15 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
       vec3 abc = (ab*ac);
       
 
-#if COLLISION_DEBUG
-      cerr << "triangle: a: " << a << " b: " << b << " c: " << c << endl;
-//      cerr << "\t\tabc: " << abc << " ab: " << ab << " ac: " << ac << " a0: " << a0 << endl;
-      cerr << "triangle";
-#endif
       if ((abc*ac).dot(a0) > 0) { // ac or ab edge or a corner
-#if COLLISION_DEBUG
-        cerr << ".1";
-#endif
         if (ac.dot(a0) > 0) { // ac edge
-#if COLLISION_DEBUG
-          cerr << ".1";
-#endif
           // pts => c,a
           pts[1] = pts[2];
           pts.pop_back();
           dir = ac * a0 * ac;
         }
         else {
-#if COLLISION_DEBUG
-          cerr << ".2";
-#endif
           if (ab.dot(a0) > 0) { // ab edge
-#if COLLISION_DEBUG
-            cerr << ".1";
-#endif
             // pts => b,a
             pts[0] = pts[1];
             pts[1] = pts[2];
@@ -110,9 +94,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
             dir = ab * a0 * ab;
           }
           else { // a corner
-#if COLLISION_DEBUG
-            cerr << ".2";
-#endif
             // pts => a
             pts[0] = pts[2];
             pts.pop_back();
@@ -122,17 +103,8 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
         }
       }
       else {
-#if COLLISION_DEBUG
-        cerr << ".2";
-#endif
         if ((ab*abc).dot(a0) > 0) { // ab edge or a corner
-#if COLLISION_DEBUG
-          cerr << ".1";
-#endif
           if (ab.dot(a0) > 0) { // ab edge
-#if COLLISION_DEBUG
-            cerr << ".1";
-#endif
             // pts => b,a
             pts[0] = pts[1];
             pts[1] = pts[2];
@@ -140,9 +112,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
             dir = ab * a0 * ab;
           }
           else { // a corner
-#if COLLISION_DEBUG
-            cerr << ".2";
-#endif
             // pts => a
             pts[0] = pts[2];
             pts.pop_back();
@@ -151,28 +120,16 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
           }
         }
         else { // inside triangle, above or below
-#if COLLISION_DEBUG
-          cerr << "-2";
-#endif
           double v = abc.dot(a0);
           if (v == 0) {
             dir = a0;
-#if COLLISION_DEBUG
-            cerr << endl;
-#endif
             return true;
           }
           else if (v > 0) { // above  points 
-#if COLLISION_DEBUG
-            cerr << ".1";
-#endif
             // pts => c,b,a
             dir = abc;
           }
           else { // below
-#if COLLISION_DEBUG
-            cerr << ".2";
-#endif
             // pts => b,c,a
             simplex_pt tmp = pts[0];
             pts[0] = pts[1];
@@ -181,9 +138,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
           }
         }
       }
-#if COLLISION_DEBUG
-      cerr << endl;
-#endif
       break;
     }
     case 4: {
@@ -199,29 +153,10 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
       vec3 abd = (ab*ad); // This vector points INWARD
       vec3 acd = (ac*ad);
 
-#if COLLISION_DEBUG
-      cerr << "ab: " << ab << " ac: " << ac << " ad: " << ad << " a0: " << a0 << "=2" << endl;
-      cerr << "abc: " << abc << " abd: " << abd << " acd: " << acd << endl;
-
-      cerr << "tetra";
-#endif
-
       if (abc.dot(a0) > 0) { // bc edges/corners excluded by prior info
-#if COLLISION_DEBUG
-        cerr << ".1";
-#endif
         if ((ab * abc).dot(a0) > 0) { // abd face, ab edge or a corner
-#if COLLISION_DEBUG
-          cerr << ".1";
-#endif
           if (ab.dot(a0) > 0) { // ab edge or abd face
-#if COLLISION_DEBUG
-            cerr << "-1";
-#endif
             if ((ab*abd).dot(a0) > 0) { // ab edge
-#if COLLISION_DEBUG
-              cerr << ".1";
-#endif
               // pts => b,a
               pts[0] = pts[2];
               pts[1] = pts[3];
@@ -230,9 +165,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
               dir = ab*a0*ab;
             }
             else { // abd face
-#if COLLISION_DEBUG
-              cerr << ".2";
-#endif
               // pts => b,d,a, wound opposite
               simplex_pt tmp = pts[0];
               pts[0] = pts[1];
@@ -243,17 +175,8 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
             }
           }
           else { // TODO: Check all these conditions
-#if COLLISION_DEBUG
-            cerr << ".2";
-#endif
             if (ad.dot(a0) < 0) {
-#if COLLISION_DEBUG
-              cerr << ".1";
-#endif
               if (ac.dot(a0) < 0) { // a corner
-#if COLLISION_DEBUG
-                cerr << ".1";
-#endif
                 // pts => a
                 pts[0] = pts[3];
                 pts.pop_back();
@@ -262,9 +185,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                 dir = a0;
               }
               else { // acd face
-#if COLLISION_DEBUG
-                cerr << ".2";
-#endif
                 // pts => d,c,a
                 pts[2] = pts[3];
                 pts.pop_back();
@@ -272,9 +192,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
               }
             }
             else { // abd face
-#if COLLISION_DEBUG
-              cerr << ".2";
-#endif
               // pts => b,d,a, wound opposite
               simplex_pt tmp = pts[0];
               pts[0] = pts[1];
@@ -286,21 +203,9 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
           }
         }
         else {
-#if COLLISION_DEBUG
-          cerr << ".2";
-#endif
           if ((abc*ac).dot(a0) > 0) { // ac edge or a corner
-#if COLLISION_DEBUG
-            cerr << ".1";
-#endif
             if (ac.dot(a0) > 0) { // ac edge
-#if COLLISION_DEBUG
-              cerr << "-1";
-#endif
               if ((ac*acd).dot(a0) > 0) { // ac edge
-#if COLLISION_DEBUG
-                cerr << ".1";
-#endif
                 // pts => c,a
                 pts[0] = pts[1];
                 pts[1] = pts[3];
@@ -309,9 +214,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                 dir = ac*a0*ac;
               }
               else { // acd face
-#if COLLISION_DEBUG
-                cerr << ".2";
-#endif
                 // pts => d,c,a
                 pts[2] = pts[3];
                 pts.pop_back();
@@ -319,13 +221,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
               }
             }
             else { // TODO Can this be abd face too?
-#if COLLISION_DEBUG
-              cerr << ".2";
-#endif
               if (ad.dot(a0) < 0) { // a corner
-#if COLLISION_DEBUG
-                cerr << ".1";
-#endif
                 // pts => a
                 pts[0] = pts[3];
                 pts.pop_back();
@@ -334,9 +230,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                 dir = a0;
               }
               else { // ad edge
-#if COLLISION_DEBUG
-                cerr << ".2";
-#endif
                 // pts => d,a
                 pts[1] = pts[3];
                 pts.pop_back();
@@ -346,9 +239,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
             }
           }
           else { // abc face
-#if COLLISION_DEBUG
-            cerr << ".2";
-#endif
             // pts => c,b,a
             pts[0] = pts[1];
             pts[1] = pts[2];
@@ -359,21 +249,9 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
         }
       }
       else { // abc face out
-#if COLLISION_DEBUG
-        cerr << ".2";
-#endif
         if (abd.dot(a0) < 0) { // abd plane, bd edges/corders excluded by prior info
-#if COLLISION_DEBUG
-          cerr << ".1";
-#endif
           if ((ab*abd).dot(a0) > 0) { // ab edge or a corner
-#if COLLISION_DEBUG
-            cerr << ".1";
-#endif
             if (ab.dot(a0) > 0) { // ab edge
-#if COLLISION_DEBUG
-              cerr << ".1";
-#endif
               // pts => b,a
               pts[0] = pts[2];
               pts[1] = pts[3];
@@ -382,9 +260,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
               dir = ab*a0*ab;
             }
             else { // a corner
-#if COLLISION_DEBUG
-              cerr << ".2";
-#endif
               // pts => a
               pts[0] = pts[3];
               pts.pop_back();
@@ -394,21 +269,9 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
             }
           }
           else {
-#if COLLISION_DEBUG
-            cerr << ".2";
-#endif
             if ((abd*ad).dot(a0) > 0) { // ad edge or a corner
-#if COLLISION_DEBUG
-              cerr << ".1";
-#endif
               if (ad.dot(a0) > 0) {
-#if COLLISION_DEBUG
-                cerr << ".1";
-#endif
                 if ((acd*ad).dot(a0) > 0) { // ad edge
-#if COLLISION_DEBUG
-                  cerr << ".1";
-#endif
                   // pts => d,a
                   pts[1] = pts[3];
                   pts.pop_back();
@@ -416,9 +279,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                   dir = ad*a0*ad;
                 }
                 else { // acd face
-#if COLLISION_DEBUG
-                  cerr << ".2";
-#endif
                   // pts => d,c,a
                   pts[2] = pts[3];
                   pts.pop_back();
@@ -426,9 +286,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                 }
               }
               else { // a corner
-#if COLLISION_DEBUG
-                cerr << ".2";
-#endif
                 // pts => a
                 pts[0] = pts[3];
                 pts.pop_back();
@@ -438,9 +295,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
               }
             }
             else { // abd face
-#if COLLISION_DEBUG
-              cerr << ".2";
-#endif
               // pts => b,d,a, wound opposite
               simplex_pt tmp = pts[0];
               pts[0] = pts[2];
@@ -452,21 +306,9 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
           }
         }
         else { // abd face out
-#if COLLISION_DEBUG
-          cerr << ".2";
-#endif
           if (acd.dot(a0) > 0) { // acd plane, cd edges/corners excluded by prior info
-#if COLLISION_DEBUG
-            cerr << ".1";
-#endif
             if ((ac*acd).dot(a0) > 0) { // ac edge or a corner
-#if COLLISION_DEBUG
-              cerr << ".1";
-#endif
               if (ac.dot(a0) > 0) { // ac edge
-#if COLLISION_DEBUG
-                cerr << ".1";
-#endif
                 // pts => c,a
                 pts[0] = pts[1];
                 pts[1] = pts[3];
@@ -475,9 +317,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                 dir = ac*a0*ac;
               }
               else { // a corner
-#if COLLISION_DEBUG
-                cerr << ".2";
-#endif
                 // pts => a
                 pts[0] = pts[3];
                 pts.pop_back();
@@ -487,17 +326,8 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
               }
             }
             else {
-#if COLLISION_DEBUG
-              cerr << "-2";
-#endif
               if ((acd*ad).dot(a0) > 0) { // ad edge or a corner
-#if COLLISION_DEBUG
-                cerr << ".1";
-#endif
                 if (ad.dot(a0) > 0) { // ad edge
-#if COLLISION_DEBUG
-                  cerr << ".1";
-#endif
                   // pts => d,a
                   pts[1] = pts[3];
                   pts.pop_back();
@@ -505,9 +335,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                   dir = ad*a0*ad;
                 }
                 else { // a corner
-#if COLLISION_DEBUG
-                  cerr << ".2";
-#endif
                   // pts => a
                   pts[0] = pts[3];
                   pts.pop_back();
@@ -517,9 +344,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                 }
               }
               else { // acd face
-#if COLLISION_DEBUG
-                cerr << ".2";
-#endif
                 // pts => d,c,a
                 pts[2] = pts[3];
                 pts.pop_back();
@@ -528,17 +352,10 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
             }
           }
           else {
-#if COLLISION_DEBUG
-            cerr << "-2";
-            cerr << endl;
-#endif
             return true;
           }
         }
       }
-#if COLLISION_DEBUG
-      cerr << endl;
-#endif
       break;
     }
   }
@@ -546,7 +363,17 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
   return false;
 }
 
-
+/**
+ * Implementation of GJK algorithm.
+ *
+ * Given 2 'collidable' objects, returns true if they are colliding.
+ * Using 2nd form, you can also extract the resulting simplex and normals.
+ */
+bool collide(const collidable &a, const collidable &b) {
+  std::vector<simplex_pt> pts;
+  vec3 dir;
+  return collide(a, b, pts, dir);
+}
 bool collide(const collidable &a, const collidable &b, std::vector<simplex_pt> &pts, vec3 &dir) {
   simplex_pt n,
              pt = collision_vec(vec3(1.0f, 0.0f, 0.0f), a, b);
@@ -563,12 +390,10 @@ bool collide(const collidable &a, const collidable &b, std::vector<simplex_pt> &
   return false;
 }
 
-bool collide(const collidable &a, const collidable &b) {
-  std::vector<simplex_pt> pts;
-  vec3 dir;
-  return collide(a, b, pts, dir);
-}
 
+/**
+ * Helper to rotate a vector around a axis by some angle.
+ */
 void rotateVec(vec3 &v, double angle, const vec3 &ax) {
   double c = cos(angle);
   double s = sin(angle);
@@ -590,15 +415,25 @@ void rotateVec(vec3 &v, double angle, const vec3 &ax) {
   v.z = z;
 }
 
-
+/**
+ * Perturbation method for finding all collision points with a plane.
+ *
+ * Given an object, normal, and a point on the surface, among others,
+ * perturbs the normal vector to calculate points that end up on the
+ * opposite side of the plane.
+ */
 list<vec3> collision_points(const collidable &a, const vec3 &n, vec3 perp, const vec3 &pt, int samples) {
-//  cout << "Testing Normal " << n << " with " << samples << " samples" << endl;
   double angle = 2*3.1415926535 / samples;
   list<vec3> pts;
   for (int i = 0; i < samples; i++) {
+    // Find new vertex in direction of perturbed normal.
     vec3 to_vert = a.collision_point(n + perp) - pt;
+
+    // Project vertex onto plane.
     vec3 on_plane = to_vert - n * n.dot(to_vert);
     bool found = false;
+
+    // Only save new points.
     for (list<vec3>::iterator it = pts.begin(); it != pts.end(); it++) {
       if (on_plane == *it) found = true;
     }
@@ -606,38 +441,13 @@ list<vec3> collision_points(const collidable &a, const vec3 &n, vec3 perp, const
     if (!found) {
       pts.push_back(on_plane);
     }
+
+    // Shift perturbation vector around normal.
     rotateVec(perp, angle, n);
   }
 
   return pts;
 }
-
-
-
-
-void closest_simplex(const collidable &a, const collidable &b, std::vector<simplex_pt> &pts) {
-  simplex_pt n = collision_vec(vec3(1, 0, 0), a, b);
-//  cerr << "val: " << n.val << " a:" << n.a << " b:" << n.b << endl;
-  pts.reserve(3);
-  pts.push_back(n);
-  vec3 dir = n.val * -1;
-  while (true) {
-    dir.norm();
-    n = collision_vec(dir, a, b);
-//    cerr << "val: " << n.val << " a:" << n.a << " b:" << n.b << endl;
-    if (n.val.dot(dir) - pts.back().val.dot(dir) < 0.1) {
-      break;
-    }
-    pts.push_back(n);
-    process_simplex(pts, dir);
-  }
-}
-
-
-bool simplex_pt::operator==(const simplex_pt &p) {
-  return a == p.a && b == p.b;
-}
-
 
 epa_tri::epa_tri(simplex_pt &a, simplex_pt &b, simplex_pt &c) : a(a), b(b), c(c) {
   dist = -1;
@@ -648,225 +458,21 @@ epa_tri::epa_tri(simplex_pt &a, simplex_pt &b, simplex_pt &c) : a(a), b(b), c(c)
   norm.norm();
 }
 
-struct hull_edge {
-  int a, b;
-  int refs;
-  hull_edge(int a, int b) : a(a), b(b) {
-    refs = 0;
-  }
-};
-struct hull_face {
-  int e1, e2, e3;
-  bool removed;
-  hull_face(int e1, int e2, int e3) : e1(e1), e2(e2), e3(e3) {
-    removed = false;
-  }
-};
-
-
-class chull {
-  typedef simplex_pt spt;
-  typedef vector<simplex_pt> plist;
-  typedef vector<hull_edge> elist;
-  typedef vector<hull_face> flist;
-
-  plist pts;
-  elist edges;
-  flist faces;
-
-  public:
-  chull(const spt &a, const spt &b, const spt &c, const spt &d) {
-    add_pt(a);
-    add_pt(b);
-    add_pt(c);
-    add_pt(d);
-  }
-  void add_pt(const spt &p) {
-//    cerr << "Adding point " << p.val << endl;
-
-    for (plist::iterator it = pts.begin(); it != pts.end(); it++) {
-      if (it->val == p.val) return;
-    }
-
-    pts.push_back(p);
-    int pos = pts.size()-1;
-
-    if (pos == 0) {
-      return;
-    }
-    else if (edges.size() == 0) {
-      addEdge(0, pos);
-      return;
-    }
-    else if (edges.size() == 1) {
-      int e1 = addEdge(0,pos);
-      int e2 = addEdge(1,pos);
-      addFace(0, e1, e2);
-      return;
-    }
-    else if (faces.size() == 1) {
-      int e1 = addEdge(0,pos);
-      int e2 = addEdge(1,pos);
-      int e3 = addEdge(2,pos);
-      addFace(0, e1, e2);
-      addFace(1, e1, e3);
-      addFace(2, e2, e3);
-      return;
-    }
-
-    list<int> possible_edges;
-    for (flist::iterator it = faces.begin(); it != faces.end(); it++) {
-      if (!it->removed && (p.val - pts[edges[it->e1].a].val).dot(fNorm(*it)) > 0) { // find faces pointing toward new pt
-        // Remove face toward new point, and add edges as possible edges for new triangles
-        fRemove(*it);
-        possible_edges.push_back(it->e1);
-        possible_edges.push_back(it->e2);
-        possible_edges.push_back(it->e3);
-      }
-    }
-
-    // Check edges of removed faces for ones still references. They are the ones along edges.
-    for (list<int>::iterator it = possible_edges.begin(); it != possible_edges.end(); it++) {
-      hull_edge &e = edges[*it];
-//      cerr << "C";
-      pEdge(e);
-      if (e.refs > 0) {
-        int e1 = getEdge(e.a, pos);
-        int e2 = getEdge(e.b, pos);
-        addFace(*it, e1, e2);
-      }
-    }
-  }
-  void addFace(int e1, int e2, int e3) {
-    faces.push_back(hull_face(e1, e2, e3));
-    edges[e1].refs += 1;
-    edges[e2].refs += 1;
-    edges[e3].refs += 1;
-
-//    cerr << "Add Face ";
-    pFace(faces.size()-1);
-  }
-  int addEdge(int a, int b) {
-    edges.push_back(hull_edge(a,b));
-    return edges.size()-1;
-  }
-  int getEdge(int a, int b) {
-    int i = 0;
-    for (elist::iterator it = edges.begin(); it != edges.end(); it++, i++) {
-      if ((it->a == a && it->b == b) || (it->b == a && it->a == b)) {
-        return i;
-      }
-    }
-    addEdge(a,b);
-    return edges.size()-1;
-  }
-  void fRemove(hull_face &f) {
-//    cerr << "Remove face ";
-    pFace(f);
-
-    f.removed = true;
-    edges[f.e1].refs -= 1;
-    edges[f.e2].refs -= 1;
-    edges[f.e3].refs -= 1;
-  }
-  vec3 fNorm(int f) {
-    return fNorm(faces[f]);
-  }
-  vec3 fNorm(hull_face &f) {
-//    cerr << "Norm: " << f.e1 << " " << f.e2 << " " << f.e3 << endl;
-//    cerr << "E" << pts[edges[f.e1].a].val << pts[edges[f.e1].b].val << endl;
-//    cerr << "E" << pts[edges[f.e2].a].val << pts[edges[f.e2].b].val << endl;
-//    cerr << "E" << pts[edges[f.e3].a].val << pts[edges[f.e3].b].val << endl;
-
-
-    hull_edge &ab = edges[f.e1];
-    hull_edge &ac = edges[f.e2];
-    vec3 norm = (pts[ab.b].val - pts[ab.a].val) * (pts[ac.b].val - pts[ac.a].val);
-    if (pts[ab.a].val.dot(norm) < 0) {
-      norm *= -1;
-    }
-    norm.norm();
-//    cerr << norm << endl;
-    return norm;
-  }
-  pair<double,int> closestFace() {
-    double min = numeric_limits<double>::infinity();
-    int face = -1;
-    int i = 0;
-    for (flist::iterator it = faces.begin(); it != faces.end(); it++, i++) {
-      if (it->removed) continue;
-      double dist = fNorm(*it).dot(pts[edges[it->e1].a].val);
-
-      if (dist < min) {
-        min = dist;
-        face = i;
-      }
-    }
-//    cerr << "Closest ";
-    pFace(face);
-    return pair<double,int>(min,face);
-  }
-
-  void pFace(int f) {
-    pFace(faces[f]);
-  }
-  void pFace(hull_face &f) {
-//    cerr << "Face: N:" << fNorm(f) << endl;
-    pEdge(f.e1);
-    pEdge(f.e2);
-    pEdge(f.e3);
-  }
-  void pEdge(int e) {
-    pEdge(edges[e]);
-  }
-  void pEdge(hull_edge &e) {
-//    cerr << " Edge:" << pts[e.a].val << " " << pts[e.b].val << " Refs:" << e.refs << endl;
-  }
-
-  epa_tri getTri(int fid) {
-    hull_face &f = faces[fid];
-    hull_edge &e1 = edges[f.e1],
-              &e2 = edges[f.e2],
-              &e3 = edges[f.e3];
-
-    set<int> s;
-    s.insert(e1.a);
-    s.insert(e1.b);
-    s.insert(e2.a);
-    s.insert(e2.b);
-    s.insert(e3.a);
-    s.insert(e3.b);
-    assert(s.size() == 3);
-    set<int>::iterator it = s.begin();
-    spt *a = &pts[*it++],
-        *b = &pts[*it++],
-        *c = &pts[*it++];
-
-    // Fix winding so normal points away from origin
-    if (((b->val - a->val)*(c->val - a->val)).dot(b->val) < 0) {
-      swap(b,c);
-    }
-
-    return epa_tri(*a,*b,*c);
-  }
-};
-
-
+/**
+ * Implementation of the EPA (Expanding Polytop Algorithm).
+ */
 epa_tri epa(const collidable &one, const collidable &two, vector<simplex_pt> &pts) {
 
   simplex_pt &a = pts[3],
              &b = pts[2],
              &c = pts[1],
              &d = pts[0];
-/*
-  cerr << "a:" << a.a << b.a << c.a << d.a << endl;
-  cerr << "b:" << a.b << b.b << c.b << d.b << endl;
-  cerr << "val" << a.val << b.val << c.val << d.val << endl;
-*/
 
+  // Create basic convex hull from GJK simplex.
   chull h(a, b, c, d);
 
   int fid;
+  // Expand hull until no new points can be found.
   while (true) {
     pair<double,int> face = h.closestFace();
     fid = face.second;
@@ -875,21 +481,22 @@ epa_tri epa(const collidable &one, const collidable &two, vector<simplex_pt> &pt
     simplex_pt p = collision_vec(norm, one, two);
     double d = p.val.dot(norm);
 
-//    cerr << "P" << p.val << norm << " d:" << d << " f:" << face.first << endl;
-
     if (d - face.first < 0.001) {
       break;
     }
-    else {
-      h.add_pt(p);
-    }
+    h.add_pt(p);
   }
 
+  // Build an EPA triangle structure from hull face.
+  // @TODO This can be cleaned up. Left over from earlier implementation.
   return h.getTri(fid);
 }
 
-typedef pair<vec3,vec3> edge;
-
+/**
+ * Given 2 edges in 3d space, find intersection.
+ * This assumes they intersect, if they don't, then the point found will
+ * be incorrect.
+ */
 vec3 find_intersection(edge &one, edge &two) {
   vec3 v1 = one.second - one.first,
        v2 = two.second - two.first;
@@ -899,6 +506,9 @@ vec3 find_intersection(edge &one, edge &two) {
   return one.first + v1 * l;
 }
 
+/**
+ * Given two polygons in 3d space, project onto plane and find overlaping areas.
+ */
 list<edge> calculate_overlap(list<edge> small, list<edge> large, const vec3 &n) {
 
   int small_len = distance(small.begin(),small.end());
@@ -911,6 +521,8 @@ list<edge> calculate_overlap(list<edge> small, list<edge> large, const vec3 &n) 
 
   if (large_len >= 3) {
     if (small_len >= 3) { // plane-plane
+
+      // Go through all edge-edge comparisons and trim/remove edges where needed.
       for (list<edge>::iterator it = large.begin(); it != large.end(); it++) {
         vec3 left = it->first,
               right = it->second,
@@ -923,6 +535,7 @@ list<edge> calculate_overlap(list<edge> small, list<edge> large, const vec3 &n) 
                 right2 = it2->second,
                 b_norm = (right2 - left2) * n;
 
+          // Remove edges if they are fully outside other shape.
           bool l = norm.dot(left - left2) > 0;
           bool r = norm.dot(left - right2) > 0;
           if (!l && !r) {
@@ -931,14 +544,16 @@ list<edge> calculate_overlap(list<edge> small, list<edge> large, const vec3 &n) 
             continue;
           }
 
+
           bool overlap = (l ^ r);
           l = (left2 - left).dot(b_norm) > 0;
           r = (left2 - right).dot(b_norm) > 0;
-
           if (overlap && l^r) {
-
+            // If they overlap fully, find intersection and crop lines.
+            // This isn't quite right, because find_inter assumes they
+            // fully intersect in 3d space but good enough for now.
+            // @TODO
             vec3 in = find_intersection(*it, *it2);
-
             if ((left - in).dot(b_norm) > 0) {
               it->first = in;
             }
@@ -951,7 +566,6 @@ list<edge> calculate_overlap(list<edge> small, list<edge> large, const vec3 &n) 
             else {
               it2->second = in;
             }
-
           }
         }
         if (!rem) {
@@ -965,6 +579,7 @@ list<edge> calculate_overlap(list<edge> small, list<edge> large, const vec3 &n) 
            &end = e.second,
            norm = (start-end)*n;
 
+      // Go through plane edges and crop edge to fit inside plane.
       for (list<edge>::iterator it = large.begin(); it != large.end(); it++) {
         vec3 &left = it->first,
              &right = it->second,
@@ -977,8 +592,8 @@ list<edge> calculate_overlap(list<edge> small, list<edge> large, const vec3 &n) 
         bool r2 = inner_norm.dot(end-left) > 0;
         
         if (l ^ r && l2 ^ r2) {
+          // @TODO find_intersection assumes full intersect
           vec3 in = find_intersection(*it, e);
-
           if ((start - in).dot(inner_norm) > 0) {
             start = in;
           }
@@ -1005,16 +620,20 @@ list<edge> calculate_overlap(list<edge> small, list<edge> large, const vec3 &n) 
       edge e1(small.front());
       edge e2(large.front());
       list<edge> edges;
-      if (((e1.first-e1.second)*(e2.first-e2.second)).lenSq() < 0.01) {
+      if (false && ((e1.first-e1.second)*(e2.first-e2.second)).lenSq() == 0) {
+        // Ignoring this case for now.
+        // @TODO
         cerr << "Line-line" << endl;
       }
       else {
+        // Return new edge with just collision points.
         vec3 in = find_intersection(e1, e2);
         edges.push_back(edge(in,in));
       }
       return edges;
     }
     else if (small_len == 1) { // line-pt
+      // Return same pt.
       return small;
     }
     else {
@@ -1023,8 +642,8 @@ list<edge> calculate_overlap(list<edge> small, list<edge> large, const vec3 &n) 
   }
   else if (large_len == 1) {
     if (small_len == 1) { // pt-pt
+      // Return same point.
       return small;
-
     }
     else {
       cout << "Object has no contact points" << endl;
@@ -1035,33 +654,39 @@ list<edge> calculate_overlap(list<edge> small, list<edge> large, const vec3 &n) 
 
   }
 
+  // For general case, just merge edges still in large and small.
   list<edge> edges(large);
   edges.insert(edges.end(), small.begin(), small.end());
   return edges;
 }
 
 
-
+/**
+ * Find contact points between two collidable objects.
+ * Returns true if they collide.
+ * a_pts/b_pts contain the same values currently, the points that contact.
+ * sep is the surface normal for the collision.
+ */
 bool contact_points(collidable &a, collidable &b, list<vec3> &a_pts, list<vec3> &b_pts, vec3 &sep) {
   
-
+  // Check if objects collide using GJK
   vector<simplex_pt> sim;
   vec3 sep_axis;
   if (!collide(a,b,sim, sep_axis)) return false;
-  sep = sep_axis;
 
+  // Find collision normal using EPA.
   epa_tri t = epa(a, b, sim);
   vec3 n = t.norm;
-
   vec3 perp = n*vec3(1.12345, 0.6543, 0.987564);
   perp *= 0.1 / perp.len();
-
   sep = n;
 
+  // Find surface points using normal perturbation.
   list<vec3> cpts = collision_points(a, n, perp, t.a.a, 20);
   vec3 inv = n*-1;
   list<vec3> cpts2 = collision_points(b, inv, perp, t.a.b, 10);
 
+  // Build list of edges from a points.
   list<edge> a_edges;
   for (list<vec3>::iterator it = cpts.begin(); it != cpts.end(); it++) {
     list<vec3>::iterator tmp = it;
@@ -1070,6 +695,7 @@ bool contact_points(collidable &a, collidable &b, list<vec3> &a_pts, list<vec3> 
     a_edges.push_back(edge(t.a.a + *it, t.a.a + *tmp));
   }
 
+  // Build list of edges from b points.
   list<edge> b_edges;
   for (list<vec3>::iterator it = cpts2.begin(); it != cpts2.end(); it++) {
     list<vec3>::iterator tmp = it;
@@ -1083,15 +709,17 @@ bool contact_points(collidable &a, collidable &b, list<vec3> &a_pts, list<vec3> 
     swap(it->first, it->second);
   }
 
+  // Find overlapping areas for surfaces.
   list<edge> edges = calculate_overlap(a_edges, b_edges, n);
-
 
   a.sim_pts.clear();
   for (list<edge>::iterator it = edges.begin(); it != edges.end(); it++) {
+    // Add points to return lists.
+    // @TODO Do we need both?
     a_pts.push_back(it->first);
     b_pts.push_back(it->first);
 
-    a.sim_pts.push_back(it->first);
+    a.sim_pts.push_back(it->first); // Set so points are highlighted for debugging
   }
   return true;
 }

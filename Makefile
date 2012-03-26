@@ -1,6 +1,9 @@
 
-OPTIONS=-lGL -lGLU -lSDL
+OPTIONS=-lGL -lGLU -lSDL -lboost_thread
 
-build: main.cpp gameobj.cpp collision.cpp vec.cpp
-	g++ main.cpp gameobj.cpp collision.cpp vec.cpp -o physics_sim ${OPTIONS}
+HEADERS= gameobj.h collision.h vec.h game.h quat.h chull.h
+CODE=main.cpp gameobj.cpp collision.cpp vec.cpp game.cpp quat.cpp chull.cpp
+
+build: ${CODE} ${HEADERS}
+	g++ ${CODE} -o physics_sim ${OPTIONS}
 

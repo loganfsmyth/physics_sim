@@ -8,92 +8,9 @@
 
 using namespace std;
 
-Quaternion Quaternion::operator*(double d) const {
-  Quaternion q(*this);
-  q.w *= d;
-  q.x *= d;
-  q.y *= d;
-  q.z *= d;
-  return q;
-}
-Quaternion Quaternion::operator*(const Quaternion &q) const {
-  Quaternion out;
-  out.w = w*q.x + x*q.w + y*q.z - z*q.y;
-  out.x = w*q.y + y*q.w + z*q.x - x*q.z;
-  out.y = w*q.z + z*q.w + x*q.y - y*q.x;
-  out.z = w*q.w - x*q.x - y*q.y - z*q.z;
-  return out;
-}
-vec3 Quaternion::operator*(vec3 v) const {
-  double l = v.len();
-  v.norm();
-  Quaternion q;
-  q.x = v.x;
-  q.y = v.y;
-  q.z = v.z;
-  q.w = 0;
-
-  Quaternion ret = q * conj();
-  ret = *this * ret;
-
-  vec3 rv(ret.x, ret.y, ret.z);
-  rv.norm();
-  rv *= l;
-  return rv;
-}
-Quaternion& Quaternion::operator+=(const Quaternion q) {
-  w += q.w;
-  x += q.x;
-  y += q.y;
-  z += q.z;
-  return *this;
-}
-Quaternion Quaternion::operator+(const Quaternion q1) const {
-  Quaternion q(*this);
-  q.w += q1.w;
-  q.x += q1.x;
-  q.y += q1.y;
-  q.z += q1.z;
-  return q;
-}
-void Quaternion::norm() {
-  double len = 1.0/sqrt(w*w + x*x + y*y + z*z);
-  w *= len;
-  x *= len;
-  y *= len;
-  z *= len;
-}
-Quaternion Quaternion::conj() const {
-  Quaternion q(*this);
-  q.x *= -1;
-  q.y *= -1;
-  q.z *= -1;
-  return q;
-}
-
-void Quaternion::fromAxisAngle(vec3 v, double angle) {
-  angle /= 2;
-  v.norm();
-  double s = sin(angle);
-  x = v.x * s;
-  y = v.y * s;
-  z = v.z * s;
-  w = cos(angle);
-}
-
-void Quaternion::axisAngle(vec3 &axis, double &angle) const {
-  double scale = sqrt(x*x + y*y + z*z);
-  if (scale == 0) {
-    axis = vec3();
-  }
-  else {
-    axis.x = x / scale;
-    axis.y = y / scale;
-    axis.z = z / scale;
-  }
-  angle = acos(w) / 2.0;
-}
-
+/**
+ * Recalculate "secondary" values as discussed on gafferongames.
+ */
 void State::recalc() {
   invMass = 1.0/mass;
   invInertiaTensor = 1.0/inertia;
@@ -120,6 +37,9 @@ void State::recalc() {
 
 }
 
+/**
+ * Given a state and derivative, calculate a new derivative for a particular time step.
+ */
 Derivative evalDer(State s) {
   Derivative d;
   d.dv = s.vel;
@@ -128,7 +48,6 @@ Derivative evalDer(State s) {
   d.torque -= s.angMo * (0.1 / s.inertia);
   return d;
 }
-
 Derivative evalDer(State s, double ms, Derivative &d) {
   s.pos += d.dv * ms;
   s.mo += d.df * ms;
@@ -145,19 +64,23 @@ Derivative evalDer(State s, double ms, Derivative &d) {
   return out;
 }
 
-
+/**
+ * Handle a collision between two objects.
+ */
 void triggerCollision(gameobj& a, gameobj &b, list<vec3> pts, vec3 &n) {
-  
-  a.next_st.mo -= n*(2*a.next_st.mo.dot(n));
-  b.next_st.mo -= n*(2*b.next_st.mo.dot(n));
+
+  a.next_st.mo = a.st.mo - n*(2*a.st.mo.dot(n));
+  b.next_st.mo = b.st.mo - n*(2*b.st.mo.dot(n));
 
 }
 
 gameobj::gameobj(vec3 c) : picked(false) {
   st.pos = c;
-
 }
 
+/**
+ * Helper to rotate the object along a given axis.
+ */
 void gameobj::rotate(double om, char axis) {
   const double a = om * 3.14159265358979 / 180;
   for (vector<vec3>::iterator it = pts.begin(); it != pts.end(); it++) {
@@ -180,6 +103,8 @@ void gameobj::rotate(double om, char axis) {
     }
   }
 }
+
+// Do RK4 Integration to get next position and orientation for object.
 void gameobj::calcNext(unsigned long ms) {
   double step = ms / 1000000.0;
 
@@ -208,22 +133,31 @@ void gameobj::calcNext(unsigned long ms) {
   next_st.recalc();
 
 }
+
+// Save the most recent calculated state as the object's state.
 void gameobj::commit() {
   st = next_st;
 }
 
+/**
+ * Support function for collision detection.
+ * See usage in collision.cpp
+ */
 vec3 gameobj::collision_point(vec3 dir) const {
   double angle = 0;
   vec3 max;
 
   vector<vec3>::const_iterator it;
 
+  // Compute a centroid.
   vec3 centroid;
   for (it = pts.begin(); it != pts.end(); it++) {
     centroid += *it;
   }
   centroid *= 1/pts.size();
 
+  // Find the point with angle closest to requested 'dir'
+  // @TODO Is this the right way to calc this?
   for (it = pts.begin(); it != pts.end(); it++) {
     vec3 pt = *it-centroid;
     double a = pt.dot(dir)/(pt.len()*dir.len());
@@ -237,22 +171,13 @@ vec3 gameobj::collision_point(vec3 dir) const {
 
 
 
+/**
+ * Initialize points for a box.
+ */
 void box::init(vec3 c, double w, double h, double l) {
   st.orient.w = 1;
   st.mass = 1;
   st.inertia = st.mass * w*w / 6.0;
-  st.recalc();
-
-  Quaternion q;
-  q.fromAxisAngle(vec3(1,0,0), 1.5);
-
-  cout << q.w << " " << q.x << " " << q.y << " " << q.z << endl;
-
-  vec3 v(0,1,0);
-
-  vec3 n = q*v;
-  cout << n << endl;
-
 
   vert_per_poly = 4;
   pts.reserve(8);
@@ -281,6 +206,9 @@ box::  box(vec3 c, double w) : gameobj(c) {
   init(c, w, w, w);
 }
 
+/**
+ * Render a box using 6 quads.
+ */
 void box::render(bool pick) const {
   int i = 0;
   double c = 0.2;
@@ -296,7 +224,7 @@ void box::render(bool pick) const {
   for (vector<int>::const_iterator it = index.begin(); it != index.end();) {
     glColor3d(c, c+0.1, c+0.2);
 
-    if (picked) {
+    if (picked) { // Highlight 'pick'ed boxes green
       glColor3d(0, 1, 0);
     }
 
@@ -308,11 +236,10 @@ void box::render(bool pick) const {
   }
   glEnd();
 
-  glRotated(-angle, axis.x, axis.y, axis.z);
+  glRotated(angle * -180 / 3.1415926589, axis.x, axis.y, axis.z);
   glTranslated(-1*st.pos.x, -1*st.pos.y, -1*st.pos.z);
 
-  
-  
+  // Render collision points
   glPointSize(10);
   glBegin(GL_POINTS);
   glColor3d(1.0, 0, 0);
@@ -322,19 +249,17 @@ void box::render(bool pick) const {
   }
   glEnd();
   
-  glBegin(GL_LINES);
-  glColor3d(0, 1.0, 0);
-  for (vector<pair<vec3,vec3> >::const_iterator it = sim_edges.begin(); it != sim_edges.end(); it++) {
-    const pair<vec3,vec3> &v = *it;
-    const vec3 f = v.first + vec3(0.05, 0, 0);
-    const vec3 s = v.second + vec3(0.05, 0, 0);
-    glVertex3d(f.x, f.y, f.z);
-    glVertex3d(s.x, s.y, s.z);
-  }
-  glEnd();
 }
 
+
+/**
+ * Create points and polys for a tetrahedron.
+ */
 void tetrahedron::init(double w) {
+  st.orient.w = 1;
+  st.mass = 1;
+  st.inertia = st.mass * w*w / 6.0;
+
   vert_per_poly = 3;
   pts.reserve(4);
   pts.push_back(vec3(   0, w/2, 0));
@@ -352,9 +277,20 @@ void tetrahedron::init(double w) {
 tetrahedron::tetrahedron(vec3 c, double w): gameobj(c) {
   init(w);
 }
+
+/**
+ * Render a tetrahedron using 4 triangles
+ */
 void tetrahedron::render(bool pick) const {
+  vec3 axis;
+  double angle;
+  st.orient.axisAngle(axis, angle);
+
+  glTranslated(st.pos.x, st.pos.y, st.pos.z);
+
   int i = 0;
   glTranslated(st.pos.x, st.pos.y, st.pos.z);
+  glRotated(angle * 180 / 3.1415926589, axis.x, axis.y, axis.z);
   double c = 0.5;
   glBegin(GL_TRIANGLES);
   for (vector<int>::const_iterator it = index.begin(); it != index.end();) {
@@ -366,8 +302,10 @@ void tetrahedron::render(bool pick) const {
   }
   glEnd();
 
+  glRotated(angle * -180 / 3.1415926589, axis.x, axis.y, axis.z);
   glTranslated(-1*st.pos.x, -1*st.pos.y, -1*st.pos.z);
   
+  // Render collision points
   glPointSize(10);
   glBegin(GL_POINTS);
   glColor3d(1.0, 0, 0);

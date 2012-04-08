@@ -375,18 +375,25 @@ bool collide(const collidable &a, const collidable &b) {
   return collide(a, b, pts, dir);
 }
 bool collide(const collidable &a, const collidable &b, std::vector<simplex_pt> &pts, vec3 &dir) {
+  const int max_iterations = 50;
   simplex_pt n,
              pt = collision_vec(vec3(1.0f, 0.0f, 0.0f), a, b);
 
   pts.reserve(4);
   pts.push_back(pt);
   dir = pt.val * -1;
-  while (true) {
+  int i;
+  for (i = 0; i < max_iterations; i++) {
     n = collision_vec(dir, a, b);
     if (n.val.dot(dir) < 0) return false;
     pts.push_back(n);
     if (process_simplex(pts, dir)) return true;
   }
+
+  if (i == max_iterations) {
+    throw "GJK hit max iterations";
+  }
+
   return false;
 }
 

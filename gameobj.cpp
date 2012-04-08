@@ -168,7 +168,7 @@ vec3 gameobj::collision_point(vec3 dir) const {
   for (it = pts.begin(); it != pts.end(); it++) {
     vec3 pt = *it-centroid;
     double a = pt.dot(dir);
-    if (a > angle) {
+    if (a >= angle) {
       angle = a;
       max = *it;
     }

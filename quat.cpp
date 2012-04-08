@@ -12,10 +12,10 @@ Quaternion Quaternion::operator*(double d) const {
 }
 Quaternion Quaternion::operator*(const Quaternion &q) const {
   Quaternion out;
-  out.w = w*q.x + x*q.w + y*q.z - z*q.y;
-  out.x = w*q.y + y*q.w + z*q.x - x*q.z;
-  out.y = w*q.z + z*q.w + x*q.y - y*q.x;
-  out.z = w*q.w - x*q.x - y*q.y - z*q.z;
+  out.w = w*q.w - x*q.x - y*q.y - z*q.z;
+  out.x = w*q.x + x*q.w + y*q.z - z*q.y;
+  out.y = w*q.y - x*q.z + y*q.w + z*q.x;
+  out.z = w*q.z + x*q.y - y*q.x + z*q.w;
   return out;
 }
 vec3 Quaternion::operator*(vec3 v) const {

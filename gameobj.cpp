@@ -3,6 +3,7 @@
 #include <GL/glu.h>
 #include <vector>
 #include <cmath>
+#include <limits>
 #include "gameobj.h"
 #include <iostream>
 
@@ -37,15 +38,21 @@ void State::recalc() {
 
 }
 
+void forces(const State &s, vec3 &force, vec3 &torque) {
+
+  force = s.pos * -10;
+//  torque = vec3(0.3, 0, 0);
+
+}
+
 /**
  * Given a state and derivative, calculate a new derivative for a particular time step.
  */
 Derivative evalDer(State s) {
   Derivative d;
   d.dv = s.vel;
-  d.df = s.pos * -10 - s.mo;
   d.spin = s.spin;
-  d.torque -= s.angMo * (0.1 / s.inertia);
+  forces(s, d.df, d.torque);
   return d;
 }
 Derivative evalDer(State s, double ms, Derivative &d) {
@@ -58,9 +65,9 @@ Derivative evalDer(State s, double ms, Derivative &d) {
   
   Derivative out;
   out.dv = s.mo;
-  out.df = s.pos * -10 - s.mo;
   out.spin = d.spin;
-  out.torque -= s.angMo * (0.1 / s.inertia);
+  
+  forces(s, out.df, out.torque);
   return out;
 }
 
@@ -144,7 +151,7 @@ void gameobj::commit() {
  * See usage in collision.cpp
  */
 vec3 gameobj::collision_point(vec3 dir) const {
-  double angle = 0;
+  double angle = -1*numeric_limits<double>::infinity();
   vec3 max;
 
   vector<vec3>::const_iterator it;
@@ -160,7 +167,7 @@ vec3 gameobj::collision_point(vec3 dir) const {
   // @TODO Is this the right way to calc this?
   for (it = pts.begin(); it != pts.end(); it++) {
     vec3 pt = *it-centroid;
-    double a = pt.dot(dir)/(pt.len()*dir.len());
+    double a = pt.dot(dir);
     if (a > angle) {
       angle = a;
       max = *it;
@@ -285,8 +292,6 @@ void tetrahedron::render(bool pick) const {
   vec3 axis;
   double angle;
   st.orient.axisAngle(axis, angle);
-
-  glTranslated(st.pos.x, st.pos.y, st.pos.z);
 
   int i = 0;
   glTranslated(st.pos.x, st.pos.y, st.pos.z);

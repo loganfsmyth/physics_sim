@@ -129,7 +129,6 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
           double v = abc.dot(a0);
           if (v == 0) {
             dir = a0;
-            return true;
           }
           else if (v > 0) { // above  points 
             // pts => c,b,a
@@ -536,6 +535,7 @@ epa_tri epa(const collidable &one, const collidable &two, vector<simplex_pt> &pt
 
   const int max_iterations = 40;
 
+  assert(pts.size() == 4);
 
   simplex_pt &a = pts[3],
              &b = pts[2],
@@ -546,7 +546,7 @@ epa_tri epa(const collidable &one, const collidable &two, vector<simplex_pt> &pt
   // Create basic convex hull from GJK simplex.
   chull h(a, b, c, d);
 
-  int fid;
+  int fid = -1;
   // Expand hull until no new points can be found.
   int i;
   for (i = 0; i < max_iterations; i++) {
@@ -566,6 +566,7 @@ epa_tri epa(const collidable &one, const collidable &two, vector<simplex_pt> &pt
   if (i == max_iterations) {
     throw string("EPA Max iterations");
   }
+  assert(fid != -1);
 
   // Build an EPA triangle structure from hull face.
   // @TODO This can be cleaned up. Left over from earlier implementation.

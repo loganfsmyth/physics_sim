@@ -188,17 +188,20 @@ epa_tri chull::getTri(const hull_face &f) {
   s.insert(e3.a);
   s.insert(e3.b);
   assert(s.size() == 3);
+  assert(pts.size() >= 3);
   set<int>::iterator it = s.begin();
-  spt *a = &pts[*it++],
-      *b = &pts[*it++],
-      *c = &pts[*it++];
+  spt &a = pts[*it];
+  it++;
+  spt &b = pts[*it];
+  it++;
+  spt &c = pts[*it];
 
   // Fix winding so normal points away from origin
-  if (((b->val - a->val)*(c->val - a->val)).dot(b->val) < 0) {
+  if (((b.val - a.val)*(c.val - a.val)).dot(b.val) < 0) {
     swap(b,c);
   }
 
-  return epa_tri(*a,*b,*c);
+  return epa_tri(a, b, c);
 }
 
 

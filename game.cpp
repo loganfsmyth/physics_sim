@@ -41,7 +41,7 @@ Game::Game() : updown(0), leftright(-180), width(800), height(600), close(false)
   leftright += 30;
 //  objs.push_back(camera);
 
-
+/*
   vec3 c1(0.587701, 0.090224, -0.672575);
   vec3 c2(1.20718, -0.0818049, 0.456655);
   
@@ -56,12 +56,12 @@ Game::Game() : updown(0), leftright(-180), width(800), height(600), close(false)
 
   diff = new hull_obj(*a, *b);
 
-  objs.push_back(diff);
+//  objs.push_back(diff);
+*/
 
-/*
+
 objs.push_back(new box(vec3(-2, 0, 0), 2));
 objs.push_back(new box(vec3(2.05, 0.05, 0), 2));
-*/
 
 /*
   objs.push_back(new box(vec3(10, 5, 7), 1.25));
@@ -277,7 +277,7 @@ void Game::simulate(unsigned long step) {
     // Save calculated state for next round.
     // This could just be done in calcNext but I want to at some point be
     // able to better handle multi-collision circumstances.
-//    (*it)->commit();
+    (*it)->commit();
   }
 }
 
@@ -343,11 +343,13 @@ void Game::render(int interp_percent) {
   glEnd();
 */
 
+/*
   vec3 v1(0.025, 0.575, 0.425), // repeat
        v2(0.025, 1.825, 0.425),
        v3(-1.225, 0.575, 0.425),
        v4(0.025, -1.425, -0.575),
-       v5(1.025, 0.575, -2.825);
+       v5(1.025, 0.575, -2.825),
+       v6(-0.025, 0.425, -0.425);
 
   glBegin(GL_POINTS);
     glColor3d(1, 0, 0); // v1 = red
@@ -360,8 +362,10 @@ void Game::render(int interp_percent) {
     glVertex3d(v4.x, v4.y, v4.z);
     glColor3d(1, 0, 1); // v5 = purple
     glVertex3d(v5.x, v5.y, v5.z);
+    glColor3d(0, 1, 1); // v5 = cyan
+    glVertex3d(v6.x, v6.y, v6.z);
   glEnd();
-
+*/
 
   // Render everything.
 //  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);

@@ -534,14 +534,15 @@ epa_tri::epa_tri(simplex_pt &a, simplex_pt &b, simplex_pt &c) : a(a), b(b), c(c)
  */
 epa_tri epa(const collidable &one, const collidable &two, vector<simplex_pt> &pts) {
 
-  const int max_iterations = 200;
+  const int max_iterations = 40;
+
 
   simplex_pt &a = pts[3],
              &b = pts[2],
              &c = pts[1],
              &d = pts[0];
 
-  cout << "===================================" << endl;
+//  cout << "===================================" << endl;
   // Create basic convex hull from GJK simplex.
   chull h(a, b, c, d);
 
@@ -555,7 +556,7 @@ epa_tri epa(const collidable &one, const collidable &two, vector<simplex_pt> &pt
 
     simplex_pt p = collision_vec(norm, one, two);
     double d = p.val.dot(norm);
-    cout << d << " " << face.first << endl;
+//    cout << d << " " << face.first << endl;
     if (d - face.first < 0.005) {
       break;
     }
@@ -752,8 +753,6 @@ bool contact_points(collidable &a, collidable &b, list<vec3> &a_pts, list<vec3> 
   vector<simplex_pt> sim;
   vec3 sep_axis;
   if (!collide(a,b,sim, sep_axis)) return false;
-
-  return true;
 
   // Find collision normal using EPA.
   epa_tri t = epa(a, b, sim);

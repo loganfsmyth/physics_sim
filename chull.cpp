@@ -30,12 +30,12 @@ void chull::add_pt(const spt &p) {
   // Don't allow points to be added more than once.
   for (plist::iterator it = pts.begin(); it != pts.end(); it++) {
     if (it->val == p.val) {
-      cout << "oops!!" << endl;
+//      cout << "oops!!" << endl;
       return;
     }
   }
 
-  cout << "Adding PT: " << p.val << endl;
+//  cout << "Adding PT: " << p.val << endl;
 
   pts.push_back(p);
   int pos = pts.size()-1;
@@ -68,9 +68,9 @@ void chull::add_pt(const spt &p) {
   for (flist::iterator it = faces.begin(); it != faces.end(); it++) {
     vec3 n(fNorm(*it));
     double d = (p.val - pts[edges[it->e1].a].val).dot(n);
+//    cout << d << " " << n << (p.val - pts[edges[it->e1].a].val) << endl;
     if (!it->removed && (d > 0)) { // find faces pointing toward new pt
       fRemove(*it);
-      cout << d << " " << n << (p.val - pts[edges[it->e1].a].val) << endl;
 
       possible_edges.insert(it->e1);
       possible_edges.insert(it->e2);
@@ -91,7 +91,7 @@ void chull::add_pt(const spt &p) {
 
 // Create a new face and inc edge refs.
 void chull::addFace(int e1, int e2, int e3) {
-  cout << "Adding Face" << endl;
+//  cout << "Adding Face a:" << e1 << " b:" << e2 << " c:" << e3 << endl;
   faces.push_back(hull_face(e1, e2, e3));
   edges[e1].refs += 1;
   edges[e2].refs += 1;
@@ -100,6 +100,7 @@ void chull::addFace(int e1, int e2, int e3) {
 
 // Add a new edge
 int chull::addEdge(int a, int b) {
+//  cout << "Add edge a:" << a << " b:" << b << endl;
   edges.push_back(hull_edge(a,b));
   return edges.size()-1;
 }
@@ -117,7 +118,7 @@ int chull::getEdge(int a, int b) {
 
 // Remove a given face and dec edge refs.
 void chull::fRemove(hull_face &f) {
-  cout << "Removed face" << endl;
+//  cout << "Removed face a:" << f.e1 << " b:" << f.e2 << " c:" << f.e3 << endl;
   f.removed = true;
   edges[f.e1].refs -= 1;
   edges[f.e2].refs -= 1;

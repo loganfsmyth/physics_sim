@@ -16,15 +16,15 @@ using namespace std;
 const int mouseoffset = 200;
 
 Game::Game() : updown(0), leftright(-180), width(800), height(600), close(false), FPS(60) {
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 6; i++) {
     movement[i] = false;
   }
 
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     throw exception();
   }
-  SDL_WM_GrabInput(SDL_GRAB_ON);
-  SDL_ShowCursor(0);
+//  SDL_WM_GrabInput(SDL_GRAB_ON);
+//  SDL_ShowCursor(0);
 
   // Set up the window and projection matrices for given window size.
   resize(width, height);
@@ -37,19 +37,49 @@ Game::Game() : updown(0), leftright(-180), width(800), height(600), close(false)
 
   glClearColor(0,0,0,0);
 
-  camera = new box(vec3(0,0,6), 0.25);
+  camera = new box(vec3(-3,0,3), 0.25);
+  leftright += 30;
 //  objs.push_back(camera);
 
+
+  vec3 c1(0.587701, 0.090224, -0.672575);
+  vec3 c2(1.20718, -0.0818049, 0.456655);
+  
+  c1 = vec3(0.6, 0.1, -0.7);
+  c2 = vec3(1.2, -0.1, 0.5);
+  vec3 off = c1 + vec3(3,0,0);
+
+  gameobj* a = new box(c1 - off, 1.25);
+  gameobj* b = new tetrahedron(c2 - off, 2);
+  objs.push_back(a);
+  objs.push_back(b);
+
+  diff = new hull_obj(*a, *b);
+
+  objs.push_back(diff);
+
+/*
+objs.push_back(new box(vec3(-2, 0, 0), 2));
+objs.push_back(new box(vec3(2.05, 0.05, 0), 2));
+*/
+
+/*
   objs.push_back(new box(vec3(10, 5, 7), 1.25));
   objs.push_back(new box(vec3(0, -4, -2), 2));
-  objs.push_back(new box(vec3(2, 2,0), 1, 4, 1));
+//  objs.push_back(new box(vec3(2, 2,0), 1, 4, 1));
   objs.push_back(new tetrahedron(vec3(5,0,4), 2));
+*/
+
   // new tetrahedron(vec3(1, 2.01, -1), 2);
   // new tetrahedron(vec3(0, 2.01, -1), 2);
   // new tetrahedron(vec3(0, 1, 1.7), 2);
 
 
 //  objs.push_back(new box(vec3(), 2));
+//  objs.push_back(new box(vec3(4,0.01,0), 2));
+
+//  objs.back()->st.angMo.x = 1;
+//  objs.back()->st.angMo.y = 1;
 }
 Game::~Game() {
   SDL_Quit();
@@ -205,6 +235,8 @@ void Game::simulate(unsigned long step) {
     if (movement[1]) move.z -= 1; // down
     if (movement[2]) move.x += 1; // left
     if (movement[3]) move.x -= 1; // right
+    if (movement[4]) move.y -= 1;
+    if (movement[5]) move.y += 1;
     move.norm();
 
     // Rotate movement direction based on current xz-plane angle.
@@ -217,8 +249,12 @@ void Game::simulate(unsigned long step) {
     camera->st.mo = vec3();
   }
 
+//  return;
+//  cout << "------" << endl;
   // Calculate next position/orientation for all objects.
   for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
+//    cout << "Obj: " << (*it)->st.pos << endl;
+
     (*it)->calcNext(step);
   }
 
@@ -226,7 +262,7 @@ void Game::simulate(unsigned long step) {
   // This will need to be sped up if there are tons of items colliding.
   for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
     for (list<gameobj*>::iterator it2 = it; it2 != objs.end(); it2++) {
-      if (*it == *it2 || *it == camera) continue;
+      if (*it == *it2 || *it == camera || *it == diff) continue;
       gameobj &a = **it;
       gameobj &b = **it2;
       list<vec3> a_pts, b_pts;
@@ -241,7 +277,7 @@ void Game::simulate(unsigned long step) {
     // Save calculated state for next round.
     // This could just be done in calcNext but I want to at some point be
     // able to better handle multi-collision circumstances.
-    (*it)->commit();
+//    (*it)->commit();
   }
 }
 
@@ -260,6 +296,72 @@ void Game::render(int interp_percent) {
   // Move camera
   glTranslated(camera->st.pos.x, camera->st.pos.y, camera->st.pos.z);
   glColor3f(1.0f, 1.0f, 0.7f);
+
+  // Draw Axes at origin
+  glBegin(GL_LINES);
+    // Red along X
+    glColor3d(1.0,0,0);
+    glVertex3d(0.0, 0.0, 0.0);
+    glVertex3d(1.0, 0.0, 0.0);
+    // Green along Y
+    glColor3d(0,1.0,0);
+    glVertex3d(0.0, 0.0, 0.0);
+    glVertex3d(0.0, 1.0, 0.0);
+    // Blue along Z
+    glColor3d(0,0,1.0);
+    glVertex3d(0.0, 0.0, 0.0);
+    glVertex3d(0.0, 0.0, 1.0);
+  glEnd();
+
+/*
+  vec3 v1(-1.225, 0.575, 0.425),
+       v2(1.025, 0.575, -2.825),
+       v3(0.025, -1.425, -0.575),
+       v4(0.025, 1.825, 0.425),
+       v5(0.025, 0.575, 0.425),
+       v6(-1.225, -1.425, -1.825);
+
+
+  // 1: v1, v2, v3
+  // 2: v2, v1, v4
+  // 3: v2, v1, v5
+  // 4: v1, v2, v6
+
+  glBegin(GL_POINTS);
+    glColor3d(1, 0, 0); // v1 = red
+    glVertex3d(v1.x, v1.y, v1.z);
+    glColor3d(0, 1, 0); // v2 = green
+    glVertex3d(v2.x, v2.y, v2.z);
+    glColor3d(0, 0, 1); // v3 = blue
+    glVertex3d(v3.x, v3.y, v3.z);
+    glColor3d(1, 1, 0); // v4 = yellow
+    glVertex3d(v4.x, v4.y, v4.z);
+    glColor3d(1, 0, 1); // v5 = purple
+    glVertex3d(v5.x, v5.y, v5.z);
+    glColor3d(0, 1, 1); // v6 = lightblue
+    glVertex3d(v6.x, v6.y, v6.z);
+  glEnd();
+*/
+
+  vec3 v1(0.025, 0.575, 0.425), // repeat
+       v2(0.025, 1.825, 0.425),
+       v3(-1.225, 0.575, 0.425),
+       v4(0.025, -1.425, -0.575),
+       v5(1.025, 0.575, -2.825);
+
+  glBegin(GL_POINTS);
+    glColor3d(1, 0, 0); // v1 = red
+    glVertex3d(v1.x, v1.y, v1.z);
+    glColor3d(0, 1, 0); // v2 = green
+    glVertex3d(v2.x, v2.y, v2.z);
+    glColor3d(0, 0, 1); // v3 = blue
+    glVertex3d(v3.x, v3.y, v3.z);
+    glColor3d(1, 1, 0); // v4 = yellow
+    glVertex3d(v4.x, v4.y, v4.z);
+    glColor3d(1, 0, 1); // v5 = purple
+    glVertex3d(v5.x, v5.y, v5.z);
+  glEnd();
+
 
   // Render everything.
 //  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -284,11 +386,11 @@ void Game::check_events() {
       case SDL_KEYDOWN:
 
         // Print out basic scene data when a key is pressed.
-        cout << "UpDown: " << updown << " Leftright:" << leftright << " pos:" << camera->st.pos << endl;
+//        cout << "UpDown: " << updown << " Leftright:" << leftright << " pos:" << camera->st.pos << endl;
         for (list<gameobj*>::iterator it = objs.begin(); it != objs.end(); it++) {
-          cout << "Obj:" << (*it)->st.pos << endl;
+//          cout << "Obj:" << (*it)->st.pos << endl;
           for (vector<vec3>::iterator it2 = (*it)->pts.begin(); it2 != (*it)->pts.end(); it2++) {
-            cout << *it2 << endl;
+//            cout << *it2 << endl;
           }
         }
 
@@ -312,6 +414,12 @@ void Game::check_events() {
             break;
           case SDLK_RIGHT:
             movement[3] = true;
+            break;
+          case SDLK_HOME:
+            movement[4] = true;
+            break;
+          case SDLK_END:
+            movement[5] = true;
             break;
 
 /*
@@ -363,6 +471,12 @@ void Game::check_events() {
             break;
           case SDLK_RIGHT:
             movement[3] = false;
+            break;
+          case SDLK_HOME:
+            movement[4] = false;
+            break;
+          case SDLK_END:
+            movement[5] = false;
             break;
 
           default: {

@@ -40,7 +40,6 @@ class gameobj: public collidable {
   public:
   std::vector<vec3> pts;
   std::vector<int> index;
-  std::vector<vec3> normals;
   int vert_per_poly;
   State st;
   State next_st;
@@ -74,6 +73,16 @@ class tetrahedron: public gameobj {
   public:
   tetrahedron(vec3 c, double w);
   virtual void render(bool pick = false) const;
+};
+
+
+
+class hull_obj: public gameobj {
+  public:
+  hull_obj(const gameobj &a, const gameobj &b);
+
+  virtual void render(bool pick = false) const;
+
 };
 
 

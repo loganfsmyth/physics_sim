@@ -3,6 +3,7 @@
 #define INCLUDE_CHULL_H
 
 #include <vector>
+#include <boost/tuple/tuple.hpp>
 #include "collision.h"
 
 struct hull_edge {
@@ -17,6 +18,7 @@ struct hull_face {
   hull_face(int e1, int e2, int e3);
 };
 
+
 class chull {
   typedef simplex_pt spt;
   typedef std::vector<simplex_pt> plist;
@@ -28,6 +30,7 @@ class chull {
   flist faces;
 
   public:
+  chull();
   chull(const spt &a, const spt &b, const spt &c, const spt &d);
   void add_pt(const spt &p);
   void addFace(int e1, int e2, int e3);
@@ -38,6 +41,9 @@ class chull {
   vec3 fNorm(hull_face &f);
   std::pair<double,int> closestFace();
   epa_tri getTri(int fid);
+  epa_tri getTri(const hull_face &f);
+
+  std::vector<boost::tuple<vec3,vec3,vec3> > getFaces();
 };
 
 

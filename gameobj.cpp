@@ -40,7 +40,7 @@ void State::recalc() {
 
 void forces(const State &s, vec3 &force, vec3 &torque) {
 
-  force = s.pos * -10;
+  force = s.pos * -10 - s.vel;
 //  torque = vec3(0.3, 0, 0);
 
 }
@@ -167,8 +167,8 @@ vec3 gameobj::collision_point(vec3 dir) const {
   // @TODO Is this the right way to calc this?
   for (it = pts.begin(); it != pts.end(); it++) {
     vec3 pt = *it-centroid;
-    double a = pt.dot(dir);
-    if (a >= angle) {
+    double a = pt.dot(dir);//(pt.len()*dir.len());
+    if (a > angle) {
       angle = a;
       max = *it;
     }
@@ -323,3 +323,79 @@ void tetrahedron::render(bool pick) const {
 }
 
 
+#include "chull.h"
+#include <boost/tuple/tuple.hpp>
+
+hull_obj::hull_obj(const gameobj &a, const gameobj &b) : gameobj(vec3()) {
+  vert_per_poly = 3;
+  st.orient.w = 1;
+  st.mass = 100000000;
+  st.inertia = 600000.0;
+
+  chull h;
+
+  for (vector<vec3>::const_iterator it = a.pts.begin(); it != a.pts.end(); it++) {
+    for (vector<vec3>::const_iterator it2 = b.pts.begin(); it2 != b.pts.end(); it2++) {
+      simplex_pt p(*it - *it2 + (a.st.pos - b.st.pos), vec3(), vec3());
+
+      h.add_pt(p);
+    }
+  }
+
+  typedef vector<boost::tuple<vec3,vec3,vec3> > flist;
+
+  flist faces = h.getFaces();
+
+  for (flist::iterator it = faces.begin(); it != faces.end(); it++) {
+
+
+    int i = pts.size();
+    pts.push_back(it->get<0>());
+    pts.push_back(it->get<1>());
+    pts.push_back(it->get<2>());
+
+    index.push_back(i);
+    index.push_back(i+1);
+    index.push_back(i+2);
+  }
+
+}
+
+void hull_obj::render(bool pick) const {
+  
+  vec3 axis;
+  double angle;
+  st.orient.axisAngle(axis, angle);
+
+  int i = 0;
+  glTranslated(st.pos.x, st.pos.y, st.pos.z);
+  glRotated(angle * 180 / 3.1415926589, axis.x, axis.y, axis.z);
+  double c = 0.5;
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  glBegin(GL_TRIANGLES);
+  for (vector<int>::const_iterator it = index.begin(); it != index.end();) {
+    glColor3d(c, c+0.1, c);
+    glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
+    glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
+    glVertex3d(pts[*it].x, pts[*it].y, pts[*it].z); it++;
+    c += 0.1;
+  }
+  glEnd();
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+  glRotated(angle * -180 / 3.1415926589, axis.x, axis.y, axis.z);
+  glTranslated(-1*st.pos.x, -1*st.pos.y, -1*st.pos.z);
+  
+  // Render collision points
+  glPointSize(10);
+  glBegin(GL_POINTS);
+  glColor3d(1.0, 0, 0);
+  for (vector<vec3>::const_iterator it = sim_pts.begin(); it != sim_pts.end(); it++) {
+    const vec3 &v = *it;
+    glVertex3d(it->x, it->y, it->z);
+  }
+  glEnd();
+
+
+
+}

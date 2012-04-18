@@ -13,11 +13,13 @@ class Game {
   // Camera object
   gameobj* camera;
 
+  gameobj* diff;
+
   // Objects in scene
   std::list<gameobj*> objs;
 
   // Flags for arrow keys
-  bool movement[4];
+  bool movement[6];
 
   // Size of window.
   int width, height;

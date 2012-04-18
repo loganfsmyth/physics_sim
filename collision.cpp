@@ -9,6 +9,12 @@
 
 #include "chull.h"
 
+//#define DBG(c) cerr << c
+
+#ifndef DBG
+#define DBG(c)
+#endif
+
 using std::cerr;
 using std::cerr;
 using std::endl;
@@ -153,10 +159,15 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
       vec3 abd = (ab*ad); // This vector points INWARD
       vec3 acd = (ac*ad);
 
+      DBG("tet.");
       if (abc.dot(a0) > 0) { // bc edges/corners excluded by prior info
+        DBG("1.");
         if ((ab * abc).dot(a0) > 0) { // abd face, ab edge or a corner
+          DBG("1.");
           if (ab.dot(a0) > 0) { // ab edge or abd face
+            DBG("1.");
             if ((ab*abd).dot(a0) > 0) { // ab edge
+              DBG("1.");
               // pts => b,a
               pts[0] = pts[2];
               pts[1] = pts[3];
@@ -165,9 +176,10 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
               dir = ab*a0*ab;
             }
             else { // abd face
+              DBG("2.");
               // pts => b,d,a, wound opposite
               simplex_pt tmp = pts[0];
-              pts[0] = pts[1];
+              pts[0] = pts[2];
               pts[1] = tmp;
               pts[2] = pts[3];
               pts.pop_back();
@@ -175,8 +187,11 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
             }
           }
           else { // TODO: Check all these conditions
+            DBG("2.");
             if (ad.dot(a0) < 0) {
+              DBG("1.");
               if (ac.dot(a0) < 0) { // a corner
+                DBG("1.");
                 // pts => a
                 pts[0] = pts[3];
                 pts.pop_back();
@@ -185,6 +200,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                 dir = a0;
               }
               else { // acd face
+                DBG("2.");
                 // pts => d,c,a
                 pts[2] = pts[3];
                 pts.pop_back();
@@ -192,6 +208,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
               }
             }
             else { // abd face
+              DBG("2.");
               // pts => b,d,a, wound opposite
               simplex_pt tmp = pts[0];
               pts[0] = pts[1];
@@ -203,9 +220,13 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
           }
         }
         else {
+          DBG("2.");
           if ((abc*ac).dot(a0) > 0) { // ac edge or a corner
+            DBG("1.");
             if (ac.dot(a0) > 0) { // ac edge
+              DBG("1.");
               if ((ac*acd).dot(a0) > 0) { // ac edge
+                DBG("1.");
                 // pts => c,a
                 pts[0] = pts[1];
                 pts[1] = pts[3];
@@ -214,6 +235,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                 dir = ac*a0*ac;
               }
               else { // acd face
+                DBG("2.");
                 // pts => d,c,a
                 pts[2] = pts[3];
                 pts.pop_back();
@@ -221,7 +243,9 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
               }
             }
             else { // TODO Can this be abd face too?
+              DBG("2.");
               if (ad.dot(a0) < 0) { // a corner
+                DBG("1.");
                 // pts => a
                 pts[0] = pts[3];
                 pts.pop_back();
@@ -230,6 +254,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                 dir = a0;
               }
               else { // ad edge
+                DBG("2.");
                 // pts => d,a
                 pts[1] = pts[3];
                 pts.pop_back();
@@ -239,6 +264,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
             }
           }
           else { // abc face
+            DBG("2.");
             // pts => c,b,a
             pts[0] = pts[1];
             pts[1] = pts[2];
@@ -249,9 +275,13 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
         }
       }
       else { // abc face out
+        DBG("2.");
         if (abd.dot(a0) < 0) { // abd plane, bd edges/corders excluded by prior info
+          DBG("1.");
           if ((ab*abd).dot(a0) > 0) { // ab edge or a corner
+            DBG("1.");
             if (ab.dot(a0) > 0) { // ab edge
+              DBG("1.");
               // pts => b,a
               pts[0] = pts[2];
               pts[1] = pts[3];
@@ -260,6 +290,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
               dir = ab*a0*ab;
             }
             else { // a corner
+              DBG("2.");
               // pts => a
               pts[0] = pts[3];
               pts.pop_back();
@@ -269,9 +300,13 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
             }
           }
           else {
+            DBG("2.");
             if ((abd*ad).dot(a0) > 0) { // ad edge or a corner
+              DBG("1.");
               if (ad.dot(a0) > 0) {
+                DBG("1.");
                 if ((acd*ad).dot(a0) > 0) { // ad edge
+                  DBG("1.");
                   // pts => d,a
                   pts[1] = pts[3];
                   pts.pop_back();
@@ -279,6 +314,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                   dir = ad*a0*ad;
                 }
                 else { // acd face
+                  DBG("2.");
                   // pts => d,c,a
                   pts[2] = pts[3];
                   pts.pop_back();
@@ -286,6 +322,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                 }
               }
               else { // a corner
+                DBG("2.");
                 // pts => a
                 pts[0] = pts[3];
                 pts.pop_back();
@@ -295,6 +332,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
               }
             }
             else { // abd face
+              DBG("2.");
               // pts => b,d,a, wound opposite
               simplex_pt tmp = pts[0];
               pts[0] = pts[2];
@@ -306,9 +344,13 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
           }
         }
         else { // abd face out
+          DBG("2.");
           if (acd.dot(a0) > 0) { // acd plane, cd edges/corners excluded by prior info
+            DBG("1.");
             if ((ac*acd).dot(a0) > 0) { // ac edge or a corner
+              DBG("1.");
               if (ac.dot(a0) > 0) { // ac edge
+                DBG("1.");
                 // pts => c,a
                 pts[0] = pts[1];
                 pts[1] = pts[3];
@@ -317,6 +359,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                 dir = ac*a0*ac;
               }
               else { // a corner
+                DBG("2.");
                 // pts => a
                 pts[0] = pts[3];
                 pts.pop_back();
@@ -326,8 +369,11 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
               }
             }
             else {
+              DBG("2.");
               if ((acd*ad).dot(a0) > 0) { // ad edge or a corner
+                DBG("1.");
                 if (ad.dot(a0) > 0) { // ad edge
+                  DBG("1.");
                   // pts => d,a
                   pts[1] = pts[3];
                   pts.pop_back();
@@ -335,6 +381,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                   dir = ad*a0*ad;
                 }
                 else { // a corner
+                  DBG("2.");
                   // pts => a
                   pts[0] = pts[3];
                   pts.pop_back();
@@ -344,6 +391,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
                 }
               }
               else { // acd face
+                DBG("2.");
                 // pts => d,c,a
                 pts[2] = pts[3];
                 pts.pop_back();
@@ -352,6 +400,8 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
             }
           }
           else {
+            DBG("2.");
+            DBG(endl);
             return true;
           }
         }
@@ -359,6 +409,7 @@ bool process_simplex(std::vector<simplex_pt> &pts, vec3 &dir) {
       break;
     }
   }
+  DBG(endl);
 
   return false;
 }
@@ -375,23 +426,36 @@ bool collide(const collidable &a, const collidable &b) {
   return collide(a, b, pts, dir);
 }
 bool collide(const collidable &a, const collidable &b, std::vector<simplex_pt> &pts, vec3 &dir) {
-  const int max_iterations = 50;
+  const int max_iterations = 8;
   simplex_pt n,
              pt = collision_vec(vec3(1.0f, 0.0f, 0.0f), a, b);
 
   pts.reserve(4);
   pts.push_back(pt);
   dir = pt.val * -1;
+//  cout << "Collide" << endl;
   int i;
   for (i = 0; i < max_iterations; i++) {
     n = collision_vec(dir, a, b);
+  /*
+    if (pts.size() == 3) {
+      cout << "Vals: " << pts[0].val << '\t'   << pts[1].val << '\t' << pts[2].val << endl;
+      cout << "A:    " << pts[0].a   << '\t'   << pts[1].a   << '\t' << pts[2].a   << endl;
+      cout << "B:    " << pts[0].b   << "\t\t" << pts[1].b   << '\t' << pts[2].b   << endl;
+      cout << "New:  " << n.val << "\t" << n.a << "\t" << n.b << " dir: " << dir << endl;
+      cout << endl;
+    }
+    else {
+      cout << pts.size() << endl;
+    }
+  */
     if (n.val.dot(dir) < 0) return false;
     pts.push_back(n);
     if (process_simplex(pts, dir)) return true;
   }
 
   if (i == max_iterations) {
-    throw "GJK hit max iterations";
+    throw string("GJK hit max iterations");
   }
 
   return false;
@@ -470,28 +534,36 @@ epa_tri::epa_tri(simplex_pt &a, simplex_pt &b, simplex_pt &c) : a(a), b(b), c(c)
  */
 epa_tri epa(const collidable &one, const collidable &two, vector<simplex_pt> &pts) {
 
+  const int max_iterations = 200;
+
   simplex_pt &a = pts[3],
              &b = pts[2],
              &c = pts[1],
              &d = pts[0];
 
+  cout << "===================================" << endl;
   // Create basic convex hull from GJK simplex.
   chull h(a, b, c, d);
 
   int fid;
   // Expand hull until no new points can be found.
-  while (true) {
+  int i;
+  for (i = 0; i < max_iterations; i++) {
     pair<double,int> face = h.closestFace();
     fid = face.second;
     vec3 norm = h.fNorm(fid);
 
     simplex_pt p = collision_vec(norm, one, two);
     double d = p.val.dot(norm);
-
-    if (d - face.first < 0.001) {
+    cout << d << " " << face.first << endl;
+    if (d - face.first < 0.005) {
       break;
     }
     h.add_pt(p);
+  }
+
+  if (i == max_iterations) {
+    throw string("EPA Max iterations");
   }
 
   // Build an EPA triangle structure from hull face.
@@ -680,6 +752,8 @@ bool contact_points(collidable &a, collidable &b, list<vec3> &a_pts, list<vec3> 
   vector<simplex_pt> sim;
   vec3 sep_axis;
   if (!collide(a,b,sim, sep_axis)) return false;
+
+  return true;
 
   // Find collision normal using EPA.
   epa_tri t = epa(a, b, sim);

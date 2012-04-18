@@ -3,6 +3,7 @@
 #include <limits>
 #include <set>
 #include <cassert>
+#include <iostream>
 
 using namespace std;
 
@@ -10,6 +11,9 @@ hull_edge::hull_edge(int a, int b) : a(a), b(b),refs(0) {
 }
 
 hull_face::hull_face(int e1, int e2, int e3) : e1(e1), e2(e2), e3(e3), removed(false) {
+}
+
+chull::chull() {
 }
 
 /**
@@ -25,8 +29,13 @@ void chull::add_pt(const spt &p) {
 
   // Don't allow points to be added more than once.
   for (plist::iterator it = pts.begin(); it != pts.end(); it++) {
-    if (it->val == p.val) return;
+    if (it->val == p.val) {
+      cout << "oops!!" << endl;
+      return;
+    }
   }
+
+  cout << "Adding PT: " << p.val << endl;
 
   pts.push_back(p);
   int pos = pts.size()-1;
@@ -55,18 +64,22 @@ void chull::add_pt(const spt &p) {
   }
 
   // Remove all faces toward new point, and add edges as possible edges for new triangles
-  list<int> possible_edges;
+  set<int> possible_edges;
   for (flist::iterator it = faces.begin(); it != faces.end(); it++) {
-    if (!it->removed && (p.val - pts[edges[it->e1].a].val).dot(fNorm(*it)) > 0) { // find faces pointing toward new pt
+    vec3 n(fNorm(*it));
+    double d = (p.val - pts[edges[it->e1].a].val).dot(n);
+    if (!it->removed && (d > 0)) { // find faces pointing toward new pt
       fRemove(*it);
-      possible_edges.push_back(it->e1);
-      possible_edges.push_back(it->e2);
-      possible_edges.push_back(it->e3);
+      cout << d << " " << n << (p.val - pts[edges[it->e1].a].val) << endl;
+
+      possible_edges.insert(it->e1);
+      possible_edges.insert(it->e2);
+      possible_edges.insert(it->e3);
     }
   }
 
   // Check edges of removed faces for ones still references. They are the ones along edges.
-  for (list<int>::iterator it = possible_edges.begin(); it != possible_edges.end(); it++) {
+  for (set<int>::iterator it = possible_edges.begin(); it != possible_edges.end(); it++) {
     hull_edge &e = edges[*it];
     if (e.refs > 0) {
       int e1 = getEdge(e.a, pos);
@@ -78,6 +91,7 @@ void chull::add_pt(const spt &p) {
 
 // Create a new face and inc edge refs.
 void chull::addFace(int e1, int e2, int e3) {
+  cout << "Adding Face" << endl;
   faces.push_back(hull_face(e1, e2, e3));
   edges[e1].refs += 1;
   edges[e2].refs += 1;
@@ -103,6 +117,7 @@ int chull::getEdge(int a, int b) {
 
 // Remove a given face and dec edge refs.
 void chull::fRemove(hull_face &f) {
+  cout << "Removed face" << endl;
   f.removed = true;
   edges[f.e1].refs -= 1;
   edges[f.e2].refs -= 1;
@@ -114,10 +129,20 @@ vec3 chull::fNorm(int f) {
   return fNorm(faces[f]);
 }
 vec3 chull::fNorm(hull_face &f) {
+
+  vec3 v;
+  for (plist::iterator it = pts.begin(); it != pts.end(); it++) {
+    v += it->val;
+  }
+  v *= 1.0 / pts.size();
+
+
   hull_edge &ab = edges[f.e1];
   hull_edge &ac = edges[f.e2];
   vec3 norm = (pts[ab.b].val - pts[ab.a].val) * (pts[ac.b].val - pts[ac.a].val);
-  if (pts[ab.a].val.dot(norm) < 0) {
+
+  // Assume normal points away from origin.
+  if ((pts[ab.a].val - v).dot(norm) < 0) {
     norm *= -1;
   }
   norm.norm();
@@ -141,9 +166,12 @@ pair<double,int> chull::closestFace() {
   return pair<double,int>(min,face);
 }
 
-// Create an epa_tri from face.
 epa_tri chull::getTri(int fid) {
-  hull_face &f = faces[fid];
+  return getTri(faces[fid]);
+}
+
+// Create an epa_tri from face.
+epa_tri chull::getTri(const hull_face &f) {
   hull_edge &e1 = edges[f.e1],
             &e2 = edges[f.e2],
             &e3 = edges[f.e3];
@@ -167,4 +195,20 @@ epa_tri chull::getTri(int fid) {
   }
 
   return epa_tri(*a,*b,*c);
+}
+
+
+
+vector<boost::tuple<vec3,vec3,vec3> > chull::getFaces() {
+  vector<boost::tuple<vec3,vec3,vec3> > nfaces;
+  nfaces.reserve(faces.size());
+
+  for (flist::iterator it = faces.begin(); it != faces.end(); it++) {
+    hull_face &f = *it;
+    if (f.removed) continue;
+
+    epa_tri t = getTri(f);
+    nfaces.push_back(boost::make_tuple(t.a.val, t.b.val, t.c.val));
+  }
+  return nfaces;
 }

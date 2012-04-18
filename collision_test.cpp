@@ -963,12 +963,20 @@ int main(int argc, char** argv) {
 
 /**/
 
+  std::vector<simplex_pt> pts(3);
+  pts[0] = simplex_pt(vec3(0.989158, 0.465224, -2.76241), vec3(), vec3());
+  pts[1] = simplex_pt(vec3(-1.26084, 0.465224, 0.48759), vec3(), vec3());
+  pts[2] = simplex_pt(vec3(-0.0108415, 0.465224, 0.48759), vec3(), vec3());
+  vec3 dir;
+  bool res = process_simplex(pts, dir);
+  cout << res << " " << pts.size() << " " << dir << endl;
+
+/** /
+
   test_two_simplex();
 
   test_three_simplex();
 
-
-/**/
   test_point_point();
   test_point_line();
   test_point_triangle();

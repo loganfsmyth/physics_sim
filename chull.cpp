@@ -87,6 +87,8 @@ void chull::add_pt(const spt &p) {
       addFace(*it, e1, e2);
     }
   }
+
+  recalc();
 }
 
 // Create a new face and inc edge refs.
@@ -131,23 +133,24 @@ vec3 chull::fNorm(int f) {
 }
 vec3 chull::fNorm(hull_face &f) {
 
-  vec3 v;
-  for (plist::iterator it = pts.begin(); it != pts.end(); it++) {
-    v += it->val;
-  }
-  v *= 1.0 / pts.size();
-
-
   hull_edge &ab = edges[f.e1];
   hull_edge &ac = edges[f.e2];
   vec3 norm = (pts[ab.b].val - pts[ab.a].val) * (pts[ac.b].val - pts[ac.a].val);
 
   // Assume normal points away from origin.
-  if ((pts[ab.a].val - v).dot(norm) < 0) {
+  if ((pts[ab.a].val - centroid).dot(norm) < 0) {
     norm *= -1;
   }
   norm.norm();
   return norm;
+}
+
+void chull::recalc() {
+  centroid = vec3();
+  for (plist::iterator it = pts.begin(); it != pts.end(); it++) {
+    centroid += it->val;
+  }
+  centroid *= 1.0 / pts.size();
 }
 
 // Find the closest face's distance and index.

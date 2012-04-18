@@ -28,6 +28,9 @@ class chull {
   plist pts;
   elist edges;
   flist faces;
+  vec3 centroid;
+
+  void recalc();
 
   public:
   chull();
